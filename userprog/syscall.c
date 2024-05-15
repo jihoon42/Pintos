@@ -203,7 +203,7 @@ int read(int fd, void *buffer, unsigned length) {
 
     if (file == NULL || file == STDOUT || file == STDERR)  // 빈 파일, stdout, stderr를 읽으려고 할 경우
         return -1;
-        
+
     if (file == STDIN) {  // stdin -> console로 직접 입력
         int i = 0;        // 쓰레기 값 return 방지
         char c;
@@ -279,17 +279,7 @@ void close(int fd) {
 
     process_close_file(fd);
 
-    if (file == STDIN) {
-        file = 0;
-        return;
-    }
-
-    if (file == STDOUT) {
-        file = 0;
-        return;
-    }
-
-    if (file == STDERR) {
+    if (file >= STDIN && file <= STDERR) {
         file = 0;
         return;
     }
