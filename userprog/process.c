@@ -84,8 +84,7 @@ static void initd(void *f_name) {
  */
 tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED) {
     thread_t *curr = thread_current();
-
-    struct intr_frame *f = (pg_round_up(rrsp()) - sizeof(struct intr_frame));  // 현재 쓰레드의 if_는 페이지 마지막에 붙어있다.
+    struct intr_frame *f = (pg_round_up(rrsp()) - sizeof(struct intr_frame));  // 현재 쓰레드의 register 정보는 스택 처음에 붙어있다.
     memcpy(&curr->parent_if, f, sizeof(struct intr_frame));                    // 1. 부모를 찾기 위해서 2. do_fork에 전달해주기 위해서
 
     /* 현재 스레드를 새 스레드로 복제합니다.*/
