@@ -774,7 +774,7 @@ int process_close_file(int fd) {
     return 0;
 }
 
-process_insert_file(int fd, struct file *f) {
+int process_insert_file(int fd, struct file *f) {
     thread_t *curr = thread_current();
     struct file **fdt = curr->fdt;
 
