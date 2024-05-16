@@ -218,6 +218,8 @@ bool pml4_set_page(uint64_t *pml4, void *upage, void *kpage, bool rw) {
     uint64_t *pte = pml4e_walk(pml4, (uint64_t)upage, 1);
 
     if (pte)
+        // 실제 물리 메모리가 없기 때문에 물리 주소를 흉내낸 Kernel Memory 주소를 할당
+        // Present | RW 권한 | User / Kernel
         *pte = vtop(kpage) | PTE_P | (rw ? PTE_W : 0) | PTE_U;
     return pte != NULL;
 }
