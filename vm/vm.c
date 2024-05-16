@@ -167,6 +167,7 @@ static bool vm_handle_wp(struct page *page UNUSED) {
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
     struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
     struct page *page = NULL;
+
     /* TODO: Validate the fault */
     if (addr == NULL)
         return false;
@@ -174,7 +175,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
     if (is_kernel_vaddr(addr) && user)  // real fault
         return false;
 
-    return vm_do_claim_page(page);
+    return swap_in(page, addr);
 }
 
 /* Free the page.
