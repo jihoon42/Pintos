@@ -171,11 +171,14 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
     /* TODO: Validate the fault */
     if (addr == NULL)
         return false;
-
     if (is_kernel_vaddr(addr) && user)  // real fault
         return false;
 
-    return swap_in(page, addr);
+    if (not_present) {
+        return vm_claim_page(addr);
+    }
+
+    return false;
 }
 
 /* Free the page.
@@ -258,8 +261,5 @@ done:  // UNIT이 아닌 모든 페이지에 대응하는 물리 메모리 데�
 void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
     /* TODO: Destroy all the supplemental_page_table hold by thread and
      * TODO: writeback all the modified contents to the storage. */
-    if (&spt->spt_hash == NULL)
-        return;
-
-    hash_destroy(&spt->spt_hash, hash_destructor);
+    hash_clear(&spt->spt_hash, hash_destructor);
 }

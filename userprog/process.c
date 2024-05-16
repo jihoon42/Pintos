@@ -226,11 +226,6 @@ int process_exec(void *f_name) {
     /* We first kill the current context */
     process_cleanup();
 
-#ifdef VM
-    /** Project 3: Anonymous Page */
-    supplemental_page_table_init(&thread_current()->spt);
-#endif
-
     /** #Project 2: Command Line Parsing - 문자열 분리 */
     char *ptr, *arg;
     int argc = 0;

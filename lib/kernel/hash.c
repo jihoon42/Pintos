@@ -384,5 +384,6 @@ bool less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux) 
 /** Project 3: Anonymous Page - 해시 파괴 */
 void hash_destructor(struct hash_elem *e, void *aux) {
     const struct page *p = hash_entry(e, struct page, hash_elem);
+    destroy(p);
     free(p);
 }
