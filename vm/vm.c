@@ -111,6 +111,8 @@ static struct frame *vm_get_frame(void) {
     /* TODO: Fill this function. */
     struct frame *frame = (struct frame *)malloc(sizeof(struct frame));
 
+    ASSERT(frame != NULL);
+
     frame->kva = palloc_get_page(PAL_USER);  // 유저 풀(실제 메모리)에서 페이지를 할당 받는다.
 
     if (frame->kva == NULL)
@@ -120,7 +122,6 @@ static struct frame *vm_get_frame(void) {
 
     frame->page = NULL;
 
-    ASSERT(frame != NULL);
     ASSERT(frame->page == NULL);
     return frame;
 }
