@@ -9,6 +9,7 @@
 
 #include "../debug.h"
 #include "threads/malloc.h"
+#include "vm/vm.h"
 
 #define list_elem_to_hash_elem(LIST_ELEM) list_entry(LIST_ELEM, struct hash_elem, list_elem)
 
@@ -363,4 +364,24 @@ static void insert_elem(struct hash *h, struct list *bucket, struct hash_elem *e
 static void remove_elem(struct hash *h, struct hash_elem *e) {
     h->elem_cnt--;
     list_remove(&e->list_elem);
+}
+
+/** Project 3: Memory Management - 해시 인덱스 리턴 */
+uint64_t hash_func(const struct hash_elem *e, void *aux) {
+    const struct page *p = hash_entry(e, struct page, hash_elem);
+
+    return hash_bytes(&p->va, sizeof(p->va));
+}
+
+/** Project 3: Memory Management - 해시 인덱스 리턴 */
+bool less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
+    const struct page *pa = hash_entry(a, struct page, hash_elem);
+    const struct page *pb = hash_entry(b, struct page, hash_elem);
+
+    return pa->va < pb->va;
+}
+
+/** Project 3: Memory Management - hash action func */
+void action_func(struct hash_elem *e, void *aux) {
+
 }
