@@ -77,7 +77,7 @@ struct page *spt_find_page(struct supplemental_page_table *spt UNUSED, void *va 
 /** Project 3: Memory Management - 검증을 통해 spt에 PAGE를 삽입합니다. */
 bool spt_insert_page(struct supplemental_page_table *spt UNUSED, struct page *page UNUSED) {
     /* TODO: Fill this function. */
-    if(!hash_insert(&spt->spt_hash, &page->hash_elem))
+    if (!hash_insert(&spt->spt_hash, &page->hash_elem))
         return true;
 
     return false;
@@ -110,8 +110,20 @@ static struct frame *vm_evict_frame(void) {
  * memory is full, this function evicts the frame to get the available memory
  * space.*/
 static struct frame *vm_get_frame(void) {
-    struct frame *frame = NULL;
     /* TODO: Fill this function. */
+    struct frame *frame = (struct frame *)malloc(sizeof(struct frame));
+
+    frame->kva = palloc_get_page(PAL_USER);  // 유저 풀(실제 메모리)에서 페이지를 할당 받는다.
+
+    if (frame->kva == NULL) {
+        frame = vm_evict_frame(); // Swap Out 수행
+        frame->page = NULL;
+
+        return frame;
+    }
+
+    list_push_back(&frame_table, &frame->frame_elem);
+    frame->page = NULL;
 
     ASSERT(frame != NULL);
     ASSERT(frame->page == NULL);
