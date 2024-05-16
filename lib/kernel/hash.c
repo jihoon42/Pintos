@@ -367,7 +367,7 @@ static void remove_elem(struct hash *h, struct hash_elem *e) {
 }
 
 /** Project 3: Memory Management - 해시 인덱스 리턴 */
-uint64_t hash_func(const struct hash_elem *e, void *aux UNUSED) {
+uint64_t hash_func(const struct hash_elem *e, void *aux) {
     const struct page *p = hash_entry(e, struct page, hash_elem);
 
     return hash_bytes(&p->va, sizeof(p->va));

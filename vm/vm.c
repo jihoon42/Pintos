@@ -193,14 +193,6 @@ void vm_dealloc_page(struct page *page) {
     free(page);
 }
 
-
-void hash_page_destroy(struct hash_elem *e, void *aux)
-{
-	struct page *page = hash_entry(e, struct page, hash_elem);
-	destroy(page);
-	free(page);
-}
-
 /** Project 3: Memory Management - VA에 할당된 페이지를 요청하세요. */
 bool vm_claim_page(void *va UNUSED) {
     /* TODO: Fill this function */
@@ -269,6 +261,6 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
 /* Free the resource hold by the supplemental page table */
 void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
 
-	hash_clear(&spt->spt_hash, hash_page_destroy); // 해시 테이블의 모든 요소를 제거
+	hash_clear(&spt->spt_hash, hash_destructor); // 해시 테이블의 모든 요소를 제거
 
 }
