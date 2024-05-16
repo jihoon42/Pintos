@@ -634,10 +634,27 @@ static bool install_page(void *upage, void *kpage, bool writable) {
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
 
+/** Project 3: Anonymous Page - uninit 페이지에 처음 접근하여 페이지 폴트가 발생하면 lazy_load_segment가 실행되어 물리 메모리에 파일 내용이 올라간다. */
 static bool lazy_load_segment(struct page *page, void *aux) {
+    struct container *container = aux;
+    struct file *file = container->file;
+    off_t offset = container->offset;
+    size_t page_read_bytes = container->page_read_bytes;
+    size_t page_zero_bytes = PGSIZE - page_read_bytes;
+
     /* TODO: Load the segment from the file */
     /* TODO: This called when the first page fault occurs on address VA. */
     /* TODO: VA is available when calling this function. */
+    file_seek(file, offset);  // 파일을 offset부터 읽기
+
+    if (file_read(file, page->frame->kva, page_read_bytes) != (off_t)page_read_bytes) {  // 물리 메모리에서 정상적으로 읽어오는지 확인하고
+        palloc_free_page(page->frame->kva);                                              // 제대로 못 읽었다면 free시키고 false 리턴
+        return false;
+    }
+
+    memset(page->frame->kva + page_read_bytes, 0, page_zero_bytes);  // 남은 page의 데이터들은 0으로 초기화
+
+    return true;
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
