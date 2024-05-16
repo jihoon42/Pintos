@@ -1,10 +1,10 @@
 /* vm.c: Generic interface for virtual memory objects. */
 #include "vm/vm.h"
 
-#include <mmu.h>
-#include <vaddr.h>
-
 #include "threads/malloc.h"
+#include "threads/mmu.h"
+#include "threads/vaddr.h"
+#include "userprog/process.h"
 #include "vm/inspect.h"
 
 static struct list frame_table;
@@ -208,8 +208,38 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
     hash_init(&spt->spt_hash, hash_func, less_func, NULL);
 }
 
-/* Copy supplemental page table from src to dst */
+/** Project 3: Anonymous Page - Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED) {
+    struct hash_iterator iter;
+    struct page *src_page;
+
+    hash_first(&iter, &src->spt_hash);
+    while (hash_next(&iter)) {
+        src_page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+
+        if (src_page->operations->type == VM_UNINIT) {  // src 타입이 uninit인 경우
+            if (!vm_alloc_page_with_initializer(page_get_type(src_page), src_page->va, src_page->writable, src_page->uninit.init, src_page->uninit.aux))
+                return false;
+            continue;
+        }
+
+        if (src_page->uninit.type & VM_MARKER_0) {  // src 페이지가 STACK인 경우
+            setup_stack(&thread_current()->tf);
+            goto done;
+        }
+
+        // src 타입이 anon인 경우
+        if (!vm_alloc_page(page_get_type(src_page), src_page->va, src_page->writable))  // src를 unint 페이지로 만들고 spt 삽입
+            return false;
+
+        if (!vm_claim_page(src_page->va))  // 물리 메모리와 매핑하고 initialize 한다
+            return false;
+
+    done:  // UNIT이 아닌 모든 페이지에 대응하는 물리 메모리 데이터 복사
+        struct page *dst_page = spt_find_page(dst, src_page->va);
+        memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+    }
+    return true;
 }
 
 /* Free the resource hold by the supplemental page table */
