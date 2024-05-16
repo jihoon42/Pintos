@@ -163,8 +163,9 @@ void vm_dealloc_page(struct page *page) {
 
 /** Project 3: Memory Management - VA에 할당된 페이지를 요청하세요. */
 bool vm_claim_page(void *va UNUSED) {
-    struct page *page = spt_find_page(&thread_current()->spt, va);
     /* TODO: Fill this function */
+    struct page *page = spt_find_page(&thread_current()->spt, va);
+    
     if (page == NULL)
         return false;
 
