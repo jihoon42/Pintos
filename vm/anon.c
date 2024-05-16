@@ -23,9 +23,13 @@ void vm_anon_init(void) {
     swap_disk = NULL;
 }
 
-/* Initialize the file mapping */
+/** Project 3: Anonymous Page - Initialize the file mapping */
 bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
     /* Set up the handler */
+    /* 데이터를 모두 0으로 초기화 */
+    struct uninit_page *uninit = &page->uninit;
+    memset(uninit, 0, sizeof(struct uninit_page));
+
     page->operations = &anon_ops;
 
     struct anon_page *anon_page = &page->anon;
