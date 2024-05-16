@@ -13,7 +13,12 @@ typedef int pid_t;
 #define READDIR_MAX_LEN 14
 
 /** #Project 2: System Call */
+#ifndef VM
 void check_address(void *addr);
+#else
+/** #Project 3: Anonymous Page */
+struct page* check_address(void *addr);
+#endif
 
 void halt(void);
 void exit(int status);

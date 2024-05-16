@@ -112,10 +112,25 @@ void syscall_handler(struct intr_frame *f UNUSED) {
     }
 }
 
+#ifndef VM
+/** #Project 2: System Call */
 void check_address(void *addr) {
-    if (is_kernel_vaddr(addr) || addr == NULL || pml4_get_page(thread_current()->pml4, addr) == NULL)
+    if (is_kernel_vaddr(addr) || addr == NULL || pml4_get_page(curr->pml4, addr) == NULL)
         exit(-1);
+
+    return spt_find_page(&curr->spt, addr);
 }
+#else
+/** #Project 3: Anonymous Page */
+struct page* check_address(void *addr) {
+    thread_t *curr = thread_current();
+
+    if (is_kernel_vaddr(addr) || addr == NULL)
+        exit(-1);
+
+    return spt_find_page(&curr->spt, addr);
+}
+#endif
 
 void halt(void) {
     power_off();
