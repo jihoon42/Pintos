@@ -381,7 +381,8 @@ bool less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux) 
     return pa->va < pb->va;
 }
 
-/** Project 3: Memory Management - hash action func */
-void action_func(struct hash_elem *e, void *aux) {
-
+/** Project 3: Anonymous Page - 해시 파괴 */
+void hash_destructor(struct hash_elem *e, void *aux) {
+    const struct page *p = hash_entry(e, struct page, hash_elem);
+    free(p);
 }

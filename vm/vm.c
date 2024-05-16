@@ -239,6 +239,7 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
         struct page *dst_page = spt_find_page(dst, src_page->va);
         memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
     }
+
     return true;
 }
 
@@ -246,4 +247,17 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
 void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
     /* TODO: Destroy all the supplemental_page_table hold by thread and
      * TODO: writeback all the modified contents to the storage. */
+    struct hash_iterator iter;
+    struct page *page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+
+    hash_first(&iter, &spt->spt_hash);
+    while (hash_next(&iter)) {
+        page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+
+        if (page->operations->type == VM_FILE) {
+            do_munmap(page->va);
+        }
+    }
+
+    hash_destroy(&spt->spt_hash, hash_destructor);
 }
