@@ -667,14 +667,23 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t 
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
         /* TODO: Set up aux to pass information to the lazy_load_segment. */
-        void *aux = NULL;
-        if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable, lazy_load_segment, aux))
+        /** Project 3: Anonymous Page - Container 생성  */
+        struct container *container = (struct container *)malloc(sizeof(struct container));
+        container->file = file;
+        container->offset = ofs;
+        container->page_read_bytes = page_read_bytes;
+
+        /** Project 3: Anonymous Page - aux 대신 container 삽입 */
+        if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable, lazy_load_segment, container))
             return false;
 
         /* Advance. */
         read_bytes -= page_read_bytes;
         zero_bytes -= page_zero_bytes;
         upage += PGSIZE;
+
+        /** Project 3: Anonymous Page - page_read_bytes 만큼 offset */
+        ofs += page_read_bytes;
     }
     return true;
 }
