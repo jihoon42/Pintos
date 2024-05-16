@@ -47,7 +47,8 @@ struct page {
     struct frame *frame; /* Back reference for frame */
 
     /* Your implementation */
-
+    struct hash_elem hash_elem;/** Project 3: Memory Management - 해시 객체 추가  */
+    
     /* Per-type data are binded into the union.
      * Each function automatically detects the current union */
     union {
@@ -66,10 +67,9 @@ struct frame {
     struct page *page;
 };
 
-/* The function table for page operations.
- * This is one way of implementing "interface" in C.
- * Put the table of "method" into the struct's member, and
- * call it whenever you needed. */
+/* 페이지 작업을 위한 함수 테이블입니다.
+ * 이는 C에서 "인터페이스"를 구현하는 한 가지 방법입니다.
+ * "method" 테이블을 구조체 멤버에 넣고 필요할 때마다 호출하세요. */
 struct page_operations {
     bool (*swap_in)(struct page *, void *);
     bool (*swap_out)(struct page *);
@@ -83,10 +83,13 @@ struct page_operations {
     if ((page)->operations->destroy) \
     (page)->operations->destroy(page)
 
-/* Representation of current process's memory space.
- * We don't want to force you to obey any specific design for this struct.
- * All designs up to you for this. */
-struct supplemental_page_table {};
+/* 현재 프로세스의 메모리 공간을 나타냅니다.
+ * 우리는 이 구조체에 대한 특정 디자인을 따르도록 강요하고 싶지 않습니다.
+ * 모든 디자인은 귀하에게 달려 있습니다. */
+
+struct supplemental_page_table {
+    struct hash spt_hash; /** Project 3: Memory Management - 해시 테이블 사용 */
+};
 
 #include "threads/thread.h"
 void supplemental_page_table_init(struct supplemental_page_table *spt);
