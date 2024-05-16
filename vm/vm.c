@@ -99,7 +99,7 @@ static struct frame *vm_get_victim(void) {
     for (e; e != list_end(&frame_table); e = list_next(e)) {
         victim = list_entry(e, struct frame, frame_elem);
         if (pml4_is_accessed(curr->pml4, victim->page->va))
-            pml4_set_accessed(curr->pml4, victim->page->va, false);  // pml4가 최근에 사용됐다면 최근에 사용하지 않은 것으로 초기화
+            pml4_set_accessed(curr->pml4, victim->page->va, false);  // pml4가 최근에 사용됐다면 기회를 한번 더 준다.
         else
             return victim;
     }
