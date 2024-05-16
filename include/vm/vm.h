@@ -1,5 +1,6 @@
 #ifndef VM_VM_H
 #define VM_VM_H
+#include <hash.h>
 #include <stdbool.h>
 
 #include "threads/palloc.h"
@@ -47,8 +48,8 @@ struct page {
     struct frame *frame; /* Back reference for frame */
 
     /* Your implementation */
-    struct hash_elem hash_elem;/** Project 3: Memory Management - 해시 객체 추가  */
-    
+    struct hash_elem hash_elem; /** Project 3: Memory Management - 해시 객체 추가  */
+
     /* Per-type data are binded into the union.
      * Each function automatically detects the current union */
     union {
