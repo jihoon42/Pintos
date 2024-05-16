@@ -165,20 +165,25 @@ static bool vm_handle_wp(struct page *page UNUSED) {
 
 /* Return true on success */
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-    struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-    struct page *page = NULL;
+	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
+	struct page *page = NULL;
+	/* TODO: Validate the fault */
+	if (addr == NULL)
+		return false;
 
-    /* TODO: Validate the fault */
-    if (addr == NULL)
-        return false;
-    if (is_kernel_vaddr(addr) && user)  // real fault
-        return false;
+	if (is_kernel_vaddr(addr))
+		return false;
 
-    if (not_present) {
-        return vm_claim_page(addr);
-    }
-
-    return false;
+	if (not_present) // 접근한 메모리의 physical page가 존재하지 않은 경우
+	{
+		page = spt_find_page(spt, addr);
+		if (page == NULL)
+			return false;
+		if (write == 1 && page->writable == 0) // write 불가능한 페이지에 write 요청한 경우
+			return false;
+		return vm_do_claim_page(page);
+	}
+	return false;
 }
 
 /* Free the page.
@@ -186,6 +191,14 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
 void vm_dealloc_page(struct page *page) {
     destroy(page);
     free(page);
+}
+
+
+void hash_page_destroy(struct hash_elem *e, void *aux)
+{
+	struct page *page = hash_entry(e, struct page, hash_elem);
+	destroy(page);
+	free(page);
 }
 
 /** Project 3: Memory Management - VA에 할당된 페이지를 요청하세요. */
@@ -222,44 +235,40 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED) {
     struct hash_iterator iter;
     struct page *src_page;
-    enum vm_type src_type;
 
     hash_first(&iter, &src->spt_hash);
     while (hash_next(&iter)) {
         src_page = hash_entry(hash_cur(&iter), struct page, hash_elem);
-        src_type = page_get_type(src_page);
 
-        if (src_type & VM_MARKER_0) {  // src 타입이 UNINIT이고 페이지가 STACK인 경우
+        if (src_page->operations->type == VM_UNINIT) {  // src 타입이 uninit인 경우
+            if (!vm_alloc_page_with_initializer(page_get_type(src_page), src_page->va, src_page->writable, src_page->uninit.init, src_page->uninit.aux))
+                return false;
+            continue;
+        }
+
+        if (src_page->uninit.type & VM_MARKER_0) {  // src 페이지가 STACK인 경우
             setup_stack(&thread_current()->tf);
             goto done;
         }
 
-        if (src_type != VM_UNINIT) {                                         // src 타입이 UNINIT이 아닌 경우
-            if (!vm_alloc_page(src_type, src_page->va, src_page->writable))  // src를 unint 페이지로 만들고 spt 삽입
-                return false;
-
-            if (!vm_claim_page(src_page->va))  // 물리 메모리와 매핑하고 initialize 한다
-                return false;
-
-            goto done;
-        }
-
-        // src 타입이 uninit인 경우
-        if (!vm_alloc_page_with_initializer(src_type, src_page->va, src_page->writable, src_page->uninit.init, src_page->uninit.aux))
+        // src 타입이 anon인 경우
+        if (!vm_alloc_page(page_get_type(src_page), src_page->va, src_page->writable))  // src를 unint 페이지로 만들고 spt 삽입
             return false;
-        continue;
-    }
 
-done:  // UNIT이 아닌 모든 페이지에 대응하는 물리 메모리 데이터 복사
-    struct page *dst_page = spt_find_page(dst, src_page->va);
-    memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+        if (!vm_claim_page(src_page->va))  // 물리 메모리와 매핑하고 initialize 한다
+            return false;
+
+    done:  // UNIT이 아닌 모든 페이지에 대응하는 물리 메모리 데이터 복사
+        struct page *dst_page = spt_find_page(dst, src_page->va);
+        memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+    }
 
     return true;
 }
 
 /* Free the resource hold by the supplemental page table */
 void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
-    /* TODO: Destroy all the supplemental_page_table hold by thread and
-     * TODO: writeback all the modified contents to the storage. */
-    hash_clear(&spt->spt_hash, hash_destructor);
+
+	hash_clear(&spt->spt_hash, hash_page_destroy); // 해시 테이블의 모든 요소를 제거
+
 }
