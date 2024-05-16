@@ -161,15 +161,17 @@ void vm_dealloc_page(struct page *page) {
     free(page);
 }
 
-/* Claim the page that allocate on VA. */
+/** Project 3: Memory Management - VA에 할당된 페이지를 요청하세요. */
 bool vm_claim_page(void *va UNUSED) {
-    struct page *page = NULL;
+    struct page *page = spt_find_page(&thread_current()->spt, va);
     /* TODO: Fill this function */
+    if (page == NULL)
+        return false;
 
     return vm_do_claim_page(page);
 }
 
-/* Claim the PAGE and set up the mmu. */
+/** Project 3: Memory Management - PAGE를 요청하고 mmu를 설정하십시오. */
 static bool vm_do_claim_page(struct page *page) {
     struct frame *frame = vm_get_frame();
 
@@ -178,8 +180,7 @@ static bool vm_do_claim_page(struct page *page) {
     page->frame = frame;
 
     /* TODO: Insert page table entry to map page's VA to frame's PA. */
-    struct thread *curr = thread_current();
-    pml4_set_page(curr->pml4, page->va, frame->kva, page->writable);
+    pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable);
 
     return swap_in(page, frame->kva);
 }
