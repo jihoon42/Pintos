@@ -101,7 +101,8 @@ static struct frame *vm_get_victim(void) {
 static struct frame *vm_evict_frame(void) {
     struct frame *victim UNUSED = vm_get_victim();
     /* TODO: swap out the victim and return the evicted frame. */
-
+    swap_out(victim->page);
+    
     return NULL;
 }
 
@@ -110,7 +111,6 @@ static struct frame *vm_evict_frame(void) {
 static struct frame *vm_get_frame(void) {
     /* TODO: Fill this function. */
     struct frame *frame = (struct frame *)malloc(sizeof(struct frame));
-
     ASSERT(frame != NULL);
 
     frame->kva = palloc_get_page(PAL_USER);  // 유저 풀(실제 메모리)에서 페이지를 할당 받는다.
@@ -121,8 +121,8 @@ static struct frame *vm_get_frame(void) {
         list_push_back(&frame_table, &frame->frame_elem);  // frame table에 추가
 
     frame->page = NULL;
-
     ASSERT(frame->page == NULL);
+
     return frame;
 }
 
