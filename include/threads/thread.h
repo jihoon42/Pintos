@@ -1,9 +1,6 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
-#define USERPROG  // Project 2: Error 방지
-#define VM        // Proejct 3: Error 방지
-
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
