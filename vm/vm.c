@@ -155,6 +155,7 @@ static struct frame *vm_get_frame(void) {
 
 /* Growing the stack. */
 static void vm_stack_growth(void *addr UNUSED) {
+    PANIC("TODO");
 }
 
 /* Handle the fault on write_protected page */
@@ -163,12 +164,25 @@ static bool vm_handle_wp(struct page *page UNUSED) {
 
 /* Return true on success */
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-    struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-    struct page *page = NULL;
-    /* TODO: Validate the fault */
-    /* TODO: Your code goes here */
+	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
+	struct page *page = NULL;
+	/* TODO: Validate the fault */
+	if (addr == NULL)
+		return false;
 
-    return vm_do_claim_page(page);
+	if (is_kernel_vaddr(addr))
+		return false;
+
+	if (not_present) // 접근한 메모리의 physical page가 존재하지 않은 경우
+	{
+		page = spt_find_page(spt, addr);
+		if (page == NULL)
+			return false;
+		if (write == 1 && page->writable == 0) // write 불가능한 페이지에 write 요청한 경우
+			return false;
+		return vm_do_claim_page(page);
+	}
+	return false;
 }
 
 /* Free the page.
@@ -247,17 +261,20 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
 void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
     /* TODO: Destroy all the supplemental_page_table hold by thread and
      * TODO: writeback all the modified contents to the storage. */
-    struct hash_iterator iter;
-    struct page *page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+    // struct hash_iterator iter;
+    // struct page *page = hash_entry(hash_cur(&iter), struct page, hash_elem);
 
-    hash_first(&iter, &spt->spt_hash);
-    while (hash_next(&iter)) {
-        page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+    // hash_first(&iter, &spt->spt_hash);
+    // while (hash_next(&iter)) {
+    //     page = hash_entry(hash_cur(&iter), struct page, hash_elem);
 
-        if (page->operations->type == VM_FILE) {
-            do_munmap(page->va);
-        }
-    }
+    //     if (page->operations->type == VM_FILE) {
+    //         do_munmap(page->va);
+    //     }
+    // }
+
+    if (&spt->spt_hash == NULL)
+        return;
 
     hash_destroy(&spt->spt_hash, hash_destructor);
 }
