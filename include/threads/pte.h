@@ -36,7 +36,7 @@
 #define PTE_FLAGS 0x00000000000000fffUL    /* Flag bits. */
 #define PTE_ADDR_MASK  0xffffffffffffff000UL /* Address bits. */
 #define PTE_AVL   0x00000e00             /* Bits available for OS use. */
-#define PTE_P 0x1                        /* 1=present, 0=not present. */
+#define PTE_P 0x1                        /* 1=Disk, 0=RAM. Swap Out 판단 */
 #define PTE_W 0x2                        /* 1=read/write, 0=read-only. */
 #define PTE_U 0x4                        /* 1=user/kernel, 0=kernel only. */
 #define PTE_A 0x20                       /* 1=accessed, 0=not acccessed. */
