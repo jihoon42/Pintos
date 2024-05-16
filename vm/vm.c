@@ -40,9 +40,8 @@ static struct frame *vm_get_victim(void);
 static bool vm_do_claim_page(struct page *page);
 static struct frame *vm_evict_frame(void);
 
-/* Create the pending page object with initializer. If you want to create a
- * page, do not create it directly and make it through this function or
- * `vm_alloc_page`. */
+/** Project 3: Anonymous Page - 이니셜라이저를 사용하여 보류 중인 페이지 개체를 만듭니다.
+ *  페이지를 만들고 싶다면 직접 만들지 말고 이 함수나 `vm_alloc_page`를 통해 만들어주세요. */
 bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writable, vm_initializer *init, void *aux) {
     ASSERT(VM_TYPE(type) != VM_UNINIT)
 
@@ -53,8 +52,26 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
         /* TODO: Create the page, fetch the initialier according to the VM type,
          * TODO: and then create "uninit" page struct by calling uninit_new. You
          * TODO: should modify the field after calling the uninit_new. */
+        struct page *page = (struct page *)malloc(sizeof(struct page));
+
+        typedef bool (*initializerFunc)(struct page *, enum vm_type, void *);
+        initializerFunc initializer = NULL;
+
+        switch (VM_TYPE(type)) {
+            case VM_ANON:
+                initializer = anon_initializer;
+                break;
+            case VM_FILE:
+                initializer = file_backed_initializer;
+                break;
+        }
+
+        uninit_new(page, upage, init, type, aux, initializer);
+
+        page->writable = writable;
 
         /* TODO: Insert the page into the spt. */
+        return spt_insert_page(spt, page);
     }
 err:
     return false;
@@ -165,7 +182,7 @@ void vm_dealloc_page(struct page *page) {
 bool vm_claim_page(void *va UNUSED) {
     /* TODO: Fill this function */
     struct page *page = spt_find_page(&thread_current()->spt, va);
-    
+
     if (page == NULL)
         return false;
 
