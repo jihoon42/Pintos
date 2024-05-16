@@ -66,6 +66,9 @@ struct page {
 struct frame {
     void *kva;
     struct page *page;
+
+    /** Project 3: Memory Management - 리스트 객체 추가  */
+    struct list_elem frame_elem;
 };
 
 /* 페이지 작업을 위한 함수 테이블입니다.
