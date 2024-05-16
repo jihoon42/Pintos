@@ -6,6 +6,9 @@
 #include "threads/malloc.h"
 #include "vm/inspect.h"
 
+static struct list frame_table;
+static struct list_elem *frame_start;
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void vm_init(void) {
