@@ -1,13 +1,13 @@
 /* vm.c: Generic interface for virtual memory objects. */
 #include "vm/vm.h"
 
+#include <mmu.h>
 #include <vaddr.h>
 
 #include "threads/malloc.h"
 #include "vm/inspect.h"
 
 static struct list frame_table;
-static struct list_elem *frame_start;
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -88,22 +88,32 @@ void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
     return true;
 }
 
-/* Get the struct frame, that will be evicted. */
+/** Project 3: Memory Management - 제거될 구조체 프레임을 가져옵니다. */
 static struct frame *vm_get_victim(void) {
     struct frame *victim = NULL;
     /* TODO: The policy for eviction is up to you. */
+    struct thread *curr = thread_current();
+    struct list_elem *e = list_begin(&frame_table);
+
+    // Second Chance 방식으로 결정
+    for (e; e != list_end(&frame_table); e = list_next(e)) {
+        victim = list_entry(e, struct frame, frame_elem);
+        if (pml4_is_accessed(curr->pml4, victim->page->va))
+            pml4_set_accessed(curr->pml4, victim->page->va, false);  // pml4가 최근에 사용됐다면 최근에 사용하지 않은 것으로 초기화
+        else
+            return victim;
+    }
 
     return victim;
 }
 
-/* Evict one page and return the corresponding frame.
- * Return NULL on error.*/
+/** Project 3: Memory Management - 한 페이지를 제거하고 해당 프레임을 반환합니다. 오류가 발생하면 NULL을 반환합니다.*/
 static struct frame *vm_evict_frame(void) {
     struct frame *victim UNUSED = vm_get_victim();
     /* TODO: swap out the victim and return the evicted frame. */
     swap_out(victim->page);
-    
-    return NULL;
+
+    return victim;
 }
 
 /** Project 3: Memory Management - palloc()을 실행하고 프레임을 가져옵니다. 사용 가능한 페이지가 없으면 해당 페이지를 제거하고 반환합니다.
