@@ -38,9 +38,8 @@ struct thread;
 
 #define VM_TYPE(type) ((type) & 7)
 
-/* The representation of "page".
- * This is kind of "parent class", which has four "child class"es, which are
- * uninit_page, file_page, anon_page, and page cache (project4).
+/* "페이지"의 표현.
+ * 이것은 일종의 "상위 클래스"로서, uninit_page, file_page, anon_page, page_cache(project4)라는 4개의 "하위 클래스"를 가지고 있습니다..
  * DO NOT REMOVE/MODIFY PREDEFINED MEMBER OF THIS STRUCTURE. */
 struct page {
     const struct page_operations *operations;
