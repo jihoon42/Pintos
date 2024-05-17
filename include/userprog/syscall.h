@@ -2,6 +2,8 @@
 #define USERPROG_SYSCALL_H
 
 #include <stdbool.h>
+#include <stddef.h>
+#include "filesys/off_t.h"
 
 void syscall_init(void);
 
