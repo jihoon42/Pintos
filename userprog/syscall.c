@@ -360,4 +360,5 @@ void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
 
 /** Project 3: Memory Mapped Files - Memory Unmapping */
 void munmap(void *addr) {
+    do_munmap(addr);
 }
