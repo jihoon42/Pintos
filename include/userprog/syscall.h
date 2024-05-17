@@ -12,7 +12,7 @@ typedef int pid_t;
 /* Maximum characters in a filename written by readdir(). */
 #define READDIR_MAX_LEN 14
 
-/** #Project 2: System Call */
+/** ----- #Project 2: System Call ----- */
 #ifndef VM
 void check_address(void *addr);
 #else
@@ -34,7 +34,12 @@ int write(int fd, const void *buffer, unsigned length);
 void seek(int fd, unsigned position);
 int tell(int fd);
 void close(int fd);
-/** ------------------------ */
+
+/** Project 3: Memory Mapped Files */
+void *mmap (void *addr, size_t length, int writable, int fd, off_t offset);
+void munmap (void *addr);
+/** ------------------------------------ */
+
 
 
 /** #Project 2: Extend File Descriptor (Extra) */

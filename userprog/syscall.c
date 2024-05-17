@@ -107,6 +107,12 @@ void syscall_handler(struct intr_frame *f UNUSED) {
         case SYS_DUP2:
             f->R.rax = dup2(f->R.rdi, f->R.rsi);
             break;
+        case SYS_MMAP:
+            f->R.rax = mmap(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
+            break;
+        case SYS_MUNMAP:
+            munmap(f->R.rdi);
+            break;
         default:
             exit(-1);
     }
@@ -122,7 +128,7 @@ void check_address(void *addr) {
 }
 #else
 /** #Project 3: Anonymous Page */
-struct page* check_address(void *addr) {
+struct page *check_address(void *addr) {
     thread_t *curr = thread_current();
 
     if (is_kernel_vaddr(addr) || addr == NULL)
@@ -132,10 +138,12 @@ struct page* check_address(void *addr) {
 }
 #endif
 
+/** #Project 2: System Call - Halt */
 void halt(void) {
     power_off();
 }
 
+/** #Project 2: System Call - Exit */
 void exit(int status) {
     thread_t *curr = thread_current();
     curr->exit_status = status;
@@ -146,12 +154,14 @@ void exit(int status) {
     thread_exit();
 }
 
+/** #Project 2: System Call - Fork */
 pid_t fork(const char *thread_name) {
     check_address(thread_name);
 
     return process_fork(thread_name, NULL);
 }
 
+/** #Project 2: System Call - Execute */
 int exec(const char *cmd_line) {
     check_address(cmd_line);
 
@@ -169,22 +179,26 @@ int exec(const char *cmd_line) {
     return 0;  // process_exec 성공시 리턴 값 없음 (do_iret)
 }
 
+/** #Project 2: System Call - Wait */
 int wait(pid_t tid) {
     return process_wait(tid);
 }
 
+/** #Project 2: System Call - Create File */
 bool create(const char *file, unsigned initial_size) {
     check_address(file);
 
     return filesys_create(file, initial_size);
 }
 
+/** #Project 2: System Call - Remove File */
 bool remove(const char *file) {
     check_address(file);
 
     return filesys_remove(file);
 }
 
+/** #Project 2: System Call - Open File */
 int open(const char *file) {
     check_address(file);
 
@@ -201,6 +215,7 @@ int open(const char *file) {
     return fd;
 }
 
+/** #Project 2: System Call - Get Filesize */
 int filesize(int fd) {
     struct file *file = process_get_file(fd);
 
@@ -210,6 +225,7 @@ int filesize(int fd) {
     return file_length(file);
 }
 
+/** #Project 2: System Call - Read File */
 int read(int fd, void *buffer, unsigned length) {
     check_address(buffer);
 
@@ -244,6 +260,7 @@ int read(int fd, void *buffer, unsigned length) {
     return bytes;
 }
 
+/** #Project 2: System Call - Write File */
 int write(int fd, const void *buffer, unsigned length) {
     check_address(buffer);
 
@@ -267,6 +284,7 @@ int write(int fd, const void *buffer, unsigned length) {
     return bytes;
 }
 
+/** #Project 2: System Call - Change Read Position */
 void seek(int fd, unsigned position) {
     struct file *file = process_get_file(fd);
 
@@ -276,6 +294,7 @@ void seek(int fd, unsigned position) {
     file_seek(file, position);
 }
 
+/** #Project 2: System Call - Get Read Position */
 int tell(int fd) {
     struct file *file = process_get_file(fd);
 
@@ -285,6 +304,7 @@ int tell(int fd) {
     return file_tell(file);
 }
 
+/** #Project 2: System Call - Close File */
 void close(int fd) {
     thread_t *curr = thread_current();
     struct file *file = process_get_file(fd);
@@ -324,4 +344,13 @@ int dup2(int oldfd, int newfd) {
     newfd = process_insert_file(newfd, oldfile);
 
     return newfd;
+}
+
+/** Project 3: Memory Mapped Files - Memory Mapping */
+void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
+}
+
+/** Project 3: Memory Mapped Files - Memory Unmapping */
+void munmap (void *addr){
+
 }
