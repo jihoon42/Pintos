@@ -165,25 +165,23 @@ static bool vm_handle_wp(struct page *page UNUSED) {
 
 /* Return true on success */
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-	struct page *page = NULL;
-	/* TODO: Validate the fault */
-	if (addr == NULL)
-		return false;
+    struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
+    struct page *page = NULL;
+    /* TODO: Validate the fault */
+    if (addr == NULL)
+        return false;
 
-	if (is_kernel_vaddr(addr))
-		return false;
+    if (is_kernel_vaddr(addr))
+        return false;
 
-	if (not_present) // 접근한 메모리의 physical page가 존재하지 않은 경우
-	{
-		page = spt_find_page(spt, addr);
-		if (page == NULL)
-			return false;
-		if (write == 1 && page->writable == 0) // write 불가능한 페이지에 write 요청한 경우
-			return false;
-		return vm_do_claim_page(page);
-	}
-	return false;
+    if (not_present)  // 접근한 메모리의 physical page가 존재하지 않은 경우
+    {
+        if (!vm_claim_page(addr)) {
+            return false;
+        }
+        return true;
+    }
+    return false;
 }
 
 /* Free the page.
@@ -260,7 +258,5 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
 
 /* Free the resource hold by the supplemental page table */
 void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED) {
-
-	hash_clear(&spt->spt_hash, hash_destructor); // 해시 테이블의 모든 요소를 제거
-
+    hash_clear(&spt->spt_hash, hash_destructor);  // 해시 테이블의 모든 요소 제거
 }
