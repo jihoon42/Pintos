@@ -163,7 +163,7 @@ static void vm_stack_growth(void *addr UNUSED) {
 static bool vm_handle_wp(struct page *page UNUSED) {
 }
 
-/* Return true on success */
+/** Project 3: Memory Management - Return true on success */
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
     struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
     struct page *page = NULL;
@@ -174,13 +174,20 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
     if (is_kernel_vaddr(addr))
         return false;
 
-    if (not_present)  // 접근한 메모리의 physical page가 존재하지 않은 경우
-    {
-        if (!vm_claim_page(addr)) {
-            return false;
-        }
+    if (!not_present)  // 접근한 메모리의 physical page가 존재하면 잘못됨
+        return false;
+
+    if (vm_claim_page(addr))  // demand page 수행
+        return true;
+
+    /** Project 3: Stack Growth */
+    void *stack_pointer = is_kernel_vaddr(f->rsp) ? thread_current()->stack_pointer : f->rsp;
+    /* stack pointer 아래 8바이트는 페이지 폴트 발생 & addr 위치를 USER_STACK에서 1MB로 제한 */
+    if (stack_pointer - 8 <= addr && addr >= STACK_LIMIT && addr <= USER_STACK) {
+        vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
         return true;
     }
+
     return false;
 }
 

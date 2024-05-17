@@ -38,6 +38,8 @@ struct thread;
 
 #define VM_TYPE(type) ((type) & 7)
 
+#define STACK_LIMIT (USER_STACK - (1 << 20)) // 1MB 제한
+
 /* "페이지"의 표현.
  * 이것은 일종의 "상위 클래스"로서, uninit_page, file_page, anon_page, page_cache(project4)라는 4개의 "하위 클래스"를 가지고 있습니다..
  * DO NOT REMOVE/MODIFY PREDEFINED MEMBER OF THIS STRUCTURE. */
