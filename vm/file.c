@@ -61,7 +61,7 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
         container->offset = offset;
         container->page_read_bytes = page_read_bytes;
 
-        if (!vm_alloc_page_with_initializer(VM_ANON, addr, writable, lazy_load_segment, container))
+        if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, container))
             return false;
 
         read_bytes -= page_read_bytes;
@@ -69,10 +69,11 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
         addr += PGSIZE;
         offset += page_read_bytes;
     }
-    
+
     return ori_addr;
 }
 
 /** Project 3: Memory Mapped Files - Memory Mapping - Do the munmap */
 void do_munmap(void *addr) {
+
 }
