@@ -24,7 +24,7 @@ int process_insert_file(int fd, struct file *f);
 bool lazy_load_segment(struct page *page, void *aux);
 
 /** Project 3: Anonymous Page */
-struct container{
+struct aux{
     struct file *file;
     off_t offset;
     size_t page_read_bytes;

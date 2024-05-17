@@ -56,12 +56,12 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
         size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-        struct container *container = (struct container *)malloc(sizeof(struct container));
-        container->file = file;
-        container->offset = offset;
-        container->page_read_bytes = page_read_bytes;
+        struct aux *aux = (struct aux *)malloc(sizeof(struct aux));
+        aux->file = file;
+        aux->offset = offset;
+        aux->page_read_bytes = page_read_bytes;
 
-        if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, container))
+        if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, aux))
             return false;
 
         read_bytes -= page_read_bytes;
@@ -75,5 +75,14 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
 
 /** Project 3: Memory Mapped Files - Memory Mapping - Do the munmap */
 void do_munmap(void *addr) {
+    while (1) {
+        struct page *page = spt_find_page(&thread_current()->spt, addr);
 
+        if (page == NULL)
+            break;
+
+        struct aux *aux = (struct aux *)page->uninit.aux;
+        
+        
+        }
 }

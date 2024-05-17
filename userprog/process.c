@@ -636,10 +636,10 @@ static bool install_page(void *upage, void *kpage, bool writable) {
 
 /** Project 3: Anonymous Page - uninit 페이지에 처음 접근하여 페이지 폴트가 발생하면 lazy_load_segment가 실행되어 물리 메모리에 파일 내용이 올라간다. */
 bool lazy_load_segment(struct page *page, void *aux) {
-    struct container *container = aux;
-    struct file *file = container->file;
-    off_t offset = container->offset;
-    size_t page_read_bytes = container->page_read_bytes;
+    struct aux *aux = aux;
+    struct file *file = aux->file;
+    off_t offset = aux->offset;
+    size_t page_read_bytes = aux->page_read_bytes;
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* TODO: Load the segment from the file */
@@ -685,13 +685,13 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t 
 
         /* TODO: Set up aux to pass information to the lazy_load_segment. */
         /** Project 3: Anonymous Page - Container 생성  */
-        struct container *container = (struct container *)malloc(sizeof(struct container));
-        container->file = file;
-        container->offset = ofs;
-        container->page_read_bytes = page_read_bytes;
+        struct aux *aux = (struct aux *)malloc(sizeof(struct aux));
+        aux->file = file;
+        aux->offset = ofs;
+        aux->page_read_bytes = page_read_bytes;
 
-        /** Project 3: Anonymous Page - aux 대신 container 삽입 */
-        if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable, lazy_load_segment, container))
+        /** Project 3: Anonymous Page - aux 대신 aux 삽입 */
+        if (!vm_alloc_page_with_initializer(VM_ANON, upage, writable, lazy_load_segment, aux))
             return false;
 
         /* Advance. */
