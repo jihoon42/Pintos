@@ -6,7 +6,12 @@
 struct page;
 enum vm_type;
 
-struct file_page {};
+/** Project 3: Memory Mapped Files - file_page 구조체 선언 */
+struct file_page {
+    struct file *file;
+    off_t offset;
+    size_t page_read_bytes;
+};
 
 void vm_file_init(void);
 bool file_backed_initializer(struct page *page, enum vm_type type, void *kva);
