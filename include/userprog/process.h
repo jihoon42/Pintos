@@ -20,6 +20,9 @@ struct file *process_get_file(int fd);
 int process_close_file(int fd);
 int process_insert_file(int fd, struct file *f);
 
+/** #Project 3: Memory Mapped Files */
+bool lazy_load_segment(struct page *page, void *aux);
+
 /** Project 3: Anonymous Page */
 struct container{
     struct file *file;
