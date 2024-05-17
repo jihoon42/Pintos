@@ -238,8 +238,10 @@ int process_exec(void *f_name) {
     success = load(file_name, &if_);
 
     /* If load failed, quit. */
-    if (!success)
+    if (!success) {
+        palloc_free_page(file_name);
         return -1;
+    }
 
     argument_stack(argv, argc, &if_);
 
@@ -267,12 +269,11 @@ int process_wait(tid_t child_tid UNUSED) {
 
     sema_down(&child->wait_sema);  // 자식 프로세스가 종료될 때 까지 대기.
 
-    int exit_status = child->exit_status;
     list_remove(&child->child_elem);
 
     sema_up(&child->exit_sema);  // 자식 프로세스가 죽을 수 있도록 signal
 
-    return exit_status;
+    return child->exit_status;
 }
 
 /** #Project 2: System Call - Exit the process. This function is called by thread_exit (). */
@@ -285,10 +286,9 @@ void process_exit(void) {
 
     for (int fd = 0; fd < curr->fd_idx; fd++)  // FDT 비우기
         close(fd);
+    palloc_free_multiple(curr->fdt, FDT_PAGES);
 
     file_close(curr->runn_file);  // 현재 프로세스가 실행중인 파일 종료
-
-    palloc_free_multiple(curr->fdt, FDT_PAGES);
 
     process_cleanup();
 
@@ -415,8 +415,7 @@ static bool load(const char *file_name, struct intr_frame *if_) {
         goto done;
     }
 
-    /** #Project 2: System Call - 파일 실행 명시 및 접근 금지 설정  */
-    t->runn_file = file;
+    t->runn_file = file;   /** #Project 2: System Call - 파일 실행 적재 */
     file_deny_write(file); /** #Project 2: Denying Writes to Executables */
 
     /* Read and verify executable header. */
@@ -698,9 +697,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t 
         read_bytes -= page_read_bytes;
         zero_bytes -= page_zero_bytes;
         upage += PGSIZE;
-
-        /** Project 3: Anonymous Page - page_read_bytes 만큼 offset */
-        ofs += page_read_bytes;
+        ofs += page_read_bytes; /** Project 3: Anonymous Page - page_read_bytes 만큼 offset */
     }
     return true;
 }

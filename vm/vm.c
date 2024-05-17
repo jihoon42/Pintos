@@ -86,22 +86,17 @@ struct page *spt_find_page(struct supplemental_page_table *spt UNUSED, void *va 
     struct hash_elem *e = hash_find(&spt->spt_hash, &page->hash_elem);  // spt hash 테이블에서 hash_elem과 같은 hash를 갖는 페이지를 찾아서 return
     free(page);                                                         // 복제한 페이지 삭제
 
-    if (e != NULL)
-        return hash_entry(e, struct page, hash_elem);
-
-    return NULL;
+    return e != NULL ? hash_entry(e, struct page, hash_elem) : NULL;
 }
 
 /** Project 3: Memory Management - 검증을 통해 spt에 PAGE를 삽입합니다. */
 bool spt_insert_page(struct supplemental_page_table *spt UNUSED, struct page *page UNUSED) {
     /* TODO: Fill this function. */
-    if (!hash_insert(&spt->spt_hash, &page->hash_elem))
-        return true;
-
-    return false;
+    return hash_insert(&spt->spt_hash, &page->hash_elem) ? false : true;  // 존재하지 않으면 삽입
 }
 
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page) {
+    hash_delete(&thread_current()->spt.spt_hash, &page->hash_elem);
     vm_dealloc_page(page);
     return true;
 }
@@ -111,9 +106,9 @@ static struct frame *vm_get_victim(void) {
     struct frame *victim = NULL;
     /* TODO: The policy for eviction is up to you. */
     struct thread *curr = thread_current();
-    struct list_elem *e = list_begin(&frame_table);
 
     // Second Chance 방식으로 결정
+    struct list_elem *e = list_begin(&frame_table);
     for (e; e != list_end(&frame_table); e = list_next(e)) {
         victim = list_entry(e, struct frame, frame_elem);
         if (pml4_is_accessed(curr->pml4, victim->page->va))
@@ -129,7 +124,8 @@ static struct frame *vm_get_victim(void) {
 static struct frame *vm_evict_frame(void) {
     struct frame *victim UNUSED = vm_get_victim();
     /* TODO: swap out the victim and return the evicted frame. */
-    swap_out(victim->page);
+    if (victim->page)
+        swap_out(victim->page);
 
     return victim;
 }
@@ -167,8 +163,9 @@ static void vm_stack_growth(void *addr UNUSED) {
     }
 }
 
-/* Handle the fault on write_protected page */
+/** Project 3: Memory Management - Handle the fault on write_protected page */
 static bool vm_handle_wp(struct page *page UNUSED) {
+    return !(page->writable);
 }
 
 /** Project 3: Memory Management - Return true on success */
@@ -176,19 +173,13 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
     struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
     struct page *page = NULL;
     /* TODO: Validate the fault */
-    if (addr == NULL)
-        return false;
-
-    if (is_kernel_vaddr(addr))
+    if (addr == NULL || is_kernel_vaddr(addr))
         return false;
 
     if (!not_present)  // 접근한 메모리의 physical page가 존재하면 잘못됨
         return false;
 
-    if (vm_claim_page(addr))  // demand page 수행
-        return true;
-
-    /** Project 3: Stack Growth */
+    /** Project 3: Stack Growth - stack growth로 처리할 수 있는 경우 */
     void *stack_pointer = user ? f->rsp : thread_current()->stack_pointer;
     /* stack pointer 아래 8바이트는 페이지 폴트 발생 & addr 위치를 USER_STACK에서 1MB로 제한 */
     if (stack_pointer - 8 <= addr && addr >= STACK_LIMIT && addr <= USER_STACK) {
@@ -196,7 +187,10 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
         return true;
     }
 
-    return false;
+    if (write == vm_handle_wp)  // write protected 인데 write 요청한 경우
+        return false;
+
+    return vm_claim_page(addr);  // demand page 수행
 }
 
 /* Free the page.
@@ -239,17 +233,17 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
 /** Project 3: Anonymous Page - Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED) {
     struct hash_iterator iter;
+
     hash_first(&iter, &src->spt_hash);
+
     while (hash_next(&iter)) {
         struct page *src_page = hash_entry(hash_cur(&iter), struct page, hash_elem);
         enum vm_type type = src_page->operations->type;
         void *upage = src_page->va;
         bool writable = src_page->writable;
 
-        if (type == VM_UNINIT) {  // src 타입이 initialize 되지 않았을 경우
-            void *aux = src_page->uninit.aux;
-            vm_alloc_page_with_initializer(page_get_type(src_page), upage, writable, src_page->uninit.init, aux);
-        }
+        if (type == VM_UNINIT)  // src 타입이 initialize 되지 않았을 경우
+            vm_alloc_page_with_initializer(page_get_type(src_page), upage, writable, src_page->uninit.init, src_page->uninit.aux);
 
         else if (type == VM_FILE) {  // src 타입이 FILE인 경우
             struct aux *aux = malloc(sizeof(struct aux));

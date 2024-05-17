@@ -75,13 +75,16 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
         struct aux *aux = (struct aux *)malloc(sizeof(struct aux));
+        if (!aux)
+            goto err;
+
         aux->file = mfile;
         aux->offset = offset;
         aux->page_read_bytes = page_read_bytes;
 
         if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, aux)) {
             free(aux);
-            return false;
+            goto err;
         }
 
         read_bytes -= page_read_bytes;
@@ -91,6 +94,10 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
     }
 
     return ori_addr;
+
+err:
+    printf("Error: do_mmap\n");
+    return NULL;
 }
 
 /** Project 3: Memory Mapped Files - Memory Mapping - Do the munmap */
