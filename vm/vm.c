@@ -244,7 +244,7 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
     while (hash_next(&iter)) {
         struct page *src_page = hash_entry(hash_cur(&iter), struct page, hash_elem);
         enum vm_type src_type = page_get_type(src_page);
-
+        
         if (src_page->operations->type == VM_UNINIT) {  // src 타입이 initialize 되지 않았을 경우
             if (!vm_alloc_page_with_initializer(src_type, src_page->va, src_page->writable, src_page->uninit.init, src_page->uninit.aux))
                 return false;
