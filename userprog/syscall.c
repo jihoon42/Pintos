@@ -123,8 +123,6 @@ void syscall_handler(struct intr_frame *f UNUSED) {
 void check_address(void *addr) {
     if (is_kernel_vaddr(addr) || addr == NULL || pml4_get_page(curr->pml4, addr) == NULL)
         exit(-1);
-
-    return spt_find_page(&curr->spt, addr);
 }
 #else
 /** #Project 3: Anonymous Page */
@@ -348,9 +346,18 @@ int dup2(int oldfd, int newfd) {
 
 /** Project 3: Memory Mapped Files - Memory Mapping */
 void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
+    // addr은 페이지 시작 주소여야 함. length가 음수거나 쓰기 불가능한 영역도 불가능.
+    if (check_address(addr) || pg_round_down(addr) != addr || length <= 0 || writable == 0 || offset % PGSIZE != 0)
+        return NULL;
+
+    struct file *file = process_get_file(fd);
+
+    if ((file >= STDIN && file <= STDERR) || file == NULL)
+        return NULL;
+
+    return do_mmap(addr, length, writable, file, offset);
 }
 
 /** Project 3: Memory Mapped Files - Memory Unmapping */
-void munmap (void *addr){
-
+void munmap(void *addr) {
 }
