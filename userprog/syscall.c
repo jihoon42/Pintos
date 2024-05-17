@@ -363,7 +363,7 @@ void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
     if ((file >= STDIN && file <= STDERR) || file == NULL)
         return NULL;
 
-    if (file_length(file) == 0 || length <= 0)
+    if (file_length(file) == 0 || (long)length <= 0)
         return NULL;
 
     return do_mmap(addr, length, writable, file, offset);
