@@ -21,7 +21,7 @@ static const struct page_operations file_ops = {
 
 /* The initializer of file vm */
 void vm_file_init(void) {
-    // 이건 왜 있지?
+    // In this function, you can setup anything related to the file backed page.
 }
 
 /* Initialize the file backed page */
