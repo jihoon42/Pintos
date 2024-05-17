@@ -156,7 +156,15 @@ static struct frame *vm_get_frame(void) {
 
 /* Growing the stack. */
 static void vm_stack_growth(void *addr UNUSED) {
-    PANIC("TODO");
+    bool success = false;
+    if (vm_alloc_page(VM_ANON | VM_MARKER_0, addr, true)) {
+        success = vm_claim_page(addr);
+
+        if (success) {
+            /* stack bottom size 갱신 */
+            thread_current()->stack_bottom -= PGSIZE;
+        }
+    }
 }
 
 /* Handle the fault on write_protected page */
