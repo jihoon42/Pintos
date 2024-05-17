@@ -349,8 +349,10 @@ int dup2(int oldfd, int newfd) {
 
 /** Project 3: Memory Mapped Files - Memory Mapping */
 void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
-    // addr은 페이지 시작 주소여야 함. length가 음수거나 쓰기 불가능한 영역도 불가능.
-    if (pg_round_down(addr) != addr || is_kernel_vaddr(addr) || addr == NULL || length <= 0 || offset % PGSIZE != 0)
+    if (!addr || pg_round_down(addr) != addr || is_kernel_vaddr(addr) || is_kernel_vaddr(addr + length))
+        return NULL;
+
+    if (offset != pg_round_down(offset) || offset % PGSIZE != 0)
         return NULL;
 
     if (spt_find_page(&thread_current()->spt, addr))
@@ -359,6 +361,9 @@ void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
     struct file *file = process_get_file(fd);
 
     if ((file >= STDIN && file <= STDERR) || file == NULL)
+        return NULL;
+
+    if (file_length(file) == 0 || length <= 0)
         return NULL;
 
     return do_mmap(addr, length, writable, file, offset);
