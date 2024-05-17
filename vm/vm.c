@@ -244,17 +244,28 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
     hash_first(&iter, &src->spt_hash);
     while (hash_next(&iter)) {
         src_page = hash_entry(hash_cur(&iter), struct page, hash_elem);
-
+        
         if (src_page->operations->type == VM_UNINIT) {  // src 타입이 uninit인 경우
             if (!vm_alloc_page_with_initializer(page_get_type(src_page), src_page->va, src_page->writable, src_page->uninit.init, src_page->uninit.aux))
                 return false;
             continue;
         }
 
-        if (src_page->uninit.type & VM_MARKER_0) {  // src 페이지가 STACK인 경우
-            setup_stack(&thread_current()->tf);
-            goto done;
+        if(src_page->operations->type == VM_FILE)
+        {
+            struct aux *aux = malloc(sizeof(struct aux));
+            aux->file = src_page->file.file;
+            aux->offset = src_page->file.offset;
+            aux->page_read_bytes = src_page->file.page_read_bytes;
+            if(!vm_alloc_page_with_initializer(page_get_type(src_page), src_page->va, src_page->writable, NULL, aux))
+                return false;
+            struct page *file_page = spt_find_page(dst, src_page->va);
+            file_backed_initializer(file_page, page_get_type(src_page), NULL);
+            file_page->frame = src_page->frame;
+            pml4_set_page(thread_current()->pml4, file_page->va, src_page->frame->kva, src_page->writable);
+            continue;
         }
+
 
         // src 타입이 anon인 경우
         if (!vm_alloc_page(page_get_type(src_page), src_page->va, src_page->writable))  // src를 unint 페이지로 만들고 spt 삽입
