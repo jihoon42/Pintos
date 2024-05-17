@@ -239,31 +239,45 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
 /** Project 3: Anonymous Page - Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED) {
     struct hash_iterator iter;
-    struct page *src_page;
 
     hash_first(&iter, &src->spt_hash);
     while (hash_next(&iter)) {
-        src_page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+        struct page *src_page = hash_entry(hash_cur(&iter), struct page, hash_elem);
+        enum vm_type src_type = page_get_type(src_page);
 
-        if (src_page->operations->type == VM_UNINIT) {  // src 타입이 uninit인 경우
-            if (!vm_alloc_page_with_initializer(page_get_type(src_page), src_page->va, src_page->writable, src_page->uninit.init, src_page->uninit.aux))
+        if (src_page->operations->type == VM_UNINIT) {  // src 타입이 initialize 되지 않았을 경우
+            if (!vm_alloc_page_with_initializer(src_type, src_page->va, src_page->writable, src_page->uninit.init, src_page->uninit.aux))
                 return false;
+
             continue;
         }
 
-        if (src_page->uninit.type & VM_MARKER_0) {  // src 페이지가 STACK인 경우
-            setup_stack(&thread_current()->tf);
-            goto done;
+        if (src_type == VM_FILE) {  // src 타입이 FILE인 경우
+            struct aux *aux = (struct aux *)malloc(sizeof(struct aux));
+
+            aux->file = src_page->file.file;
+            aux->offset = src_page->file.offset;
+            aux->page_read_bytes = src_page->file.page_read_bytes;
+
+            if (!vm_alloc_page_with_initializer(src_type, src_page->va, src_page->writable, src_page->uninit.init, src_page->uninit.aux))
+                return false;
+
+            struct page *dst_page = spt_find_page(dst, src_page->va);
+            file_backed_initializer(dst_page, src_type, NULL);
+            dst_page->frame = src_page->frame;
+            pml4_set_page(thread_current()->pml4, dst_page->va, src_page->frame->kva, src_page->writable);
+
+            continue;
         }
 
-        // src 타입이 anon인 경우
-        if (!vm_alloc_page(page_get_type(src_page), src_page->va, src_page->writable))  // src를 unint 페이지로 만들고 spt 삽입
+        // src 타입이 ANON인 경우
+        if (!vm_alloc_page(src_type, src_page->va, src_page->writable))  // uninit 페이지로 생성 및 초기화
             return false;
 
         if (!vm_claim_page(src_page->va))  // 물리 메모리와 매핑하고 initialize 한다
             return false;
 
-    done:  // UNIT이 아닌 모든 페이지에 대응하는 물리 메모리 데이터 복사
+        // 대응하는 물리 메모리 데이터 복제
         struct page *dst_page = spt_find_page(dst, src_page->va);
         memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
     }
