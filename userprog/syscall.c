@@ -55,13 +55,14 @@ void syscall_init(void) {
 /* The main system call interface */
 /** #Project 2: System Call - 시스템 콜 핸들러 */
 void syscall_handler(struct intr_frame *f UNUSED) {
+#ifdef VM
+    /** Project 3: Memory Mapped Files - rsp 백업 */
+    thread_current()->stack_pointer = f->rsp;
+#endif
     // TODO: Your implementation goes here.
     int sys_number = f->R.rax;
 
-    // Argument 순서
-    // %rdi %rsi %rdx %r10 %r8 %r9
-
-    switch (sys_number) {
+    switch (sys_number) {  // Argument 순서 - %rdi %rsi %rdx %r10 %r8 %r9
         case SYS_HALT:
             halt();
             break;
@@ -90,9 +91,11 @@ void syscall_handler(struct intr_frame *f UNUSED) {
             f->R.rax = filesize(f->R.rdi);
             break;
         case SYS_READ:
+            check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, true);
             f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
             break;
         case SYS_WRITE:
+            check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, false);
             f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
             break;
         case SYS_SEEK:
@@ -347,7 +350,10 @@ int dup2(int oldfd, int newfd) {
 /** Project 3: Memory Mapped Files - Memory Mapping */
 void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
     // addr은 페이지 시작 주소여야 함. length가 음수거나 쓰기 불가능한 영역도 불가능.
-    if (check_address(addr) || pg_round_down(addr) != addr || length <= 0 || writable == 0 || offset % PGSIZE != 0)
+    if (pg_round_down(addr) != addr || is_kernel_vaddr(addr) || addr == NULL || length <= 0 || offset % PGSIZE != 0)
+        return NULL;
+
+    if (spt_find_page(&thread_current()->spt, addr))
         return NULL;
 
     struct file *file = process_get_file(fd);
@@ -361,4 +367,17 @@ void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
 /** Project 3: Memory Mapped Files - Memory Unmapping */
 void munmap(void *addr) {
     do_munmap(addr);
+}
+
+/** Project 3: Memory Mapped Files - 버퍼 유효성 검사 */
+void check_valid_buffer(void *buffer, size_t size, void *rsp, bool writable) {
+    for (size_t i = 0; i < size; i++) {
+        /* buffer가 spt에 존재하는지 검사 */
+        struct page *page = check_address(buffer + i);
+
+        if (page == NULL)
+            exit(-1);
+        if (writable == true && page->writable == false)
+            exit(-1);
+    }
 }
