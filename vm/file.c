@@ -75,7 +75,7 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
         struct aux *aux = (struct aux *)malloc(sizeof(struct aux));
-        aux->file = file;
+        aux->file = mfile;
         aux->offset = offset;
         aux->page_read_bytes = page_read_bytes;
 
