@@ -62,7 +62,7 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
         aux->offset = offset;
         aux->page_read_bytes = page_read_bytes;
 
-        if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, aux)){
+        if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, aux)) {
             free(aux);
             return false;
         }
@@ -86,15 +86,7 @@ void do_munmap(void *addr) {
         if (page == NULL)
             break;
 
-        struct aux *aux = (struct aux *)page->uninit.aux;
-
-        // 수정되었는지 확인해서 수정되었다면 file에 쓰고 비운다.
-        if (pml4_is_dirty(curr->pml4, page->va)) {
-            file_write_at(aux->file, addr, aux->page_read_bytes, aux->offset);
-            pml4_set_dirty(curr->pml4, page->va, false);
-        }
-
-        pml4_clear_page(curr->pml4, page->va);
+        destroy(page);  // 전체 unmap
         addr += PGSIZE;
     }
 }
