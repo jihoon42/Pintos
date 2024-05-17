@@ -636,10 +636,10 @@ static bool install_page(void *upage, void *kpage, bool writable) {
 
 /** Project 3: Anonymous Page - uninit 페이지에 처음 접근하여 페이지 폴트가 발생하면 lazy_load_segment가 실행되어 물리 메모리에 파일 내용이 올라간다. */
 bool lazy_load_segment(struct page *page, void *aux) {
-    struct aux *aux = aux;
-    struct file *file = aux->file;
-    off_t offset = aux->offset;
-    size_t page_read_bytes = aux->page_read_bytes;
+    struct aux *aux_p = aux;
+    struct file *file = aux_p->file;
+    off_t offset = aux_p->offset;
+    size_t page_read_bytes = aux_p->page_read_bytes;
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* TODO: Load the segment from the file */
