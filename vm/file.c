@@ -21,6 +21,7 @@ static const struct page_operations file_ops = {
 
 /* The initializer of file vm */
 void vm_file_init(void) {
+    // 이건 왜 있지?
 }
 
 /* Initialize the file backed page */
@@ -29,6 +30,13 @@ bool file_backed_initializer(struct page *page, enum vm_type type, void *kva) {
     page->operations = &file_ops;
 
     struct file_page *file_page = &page->file;
+
+    struct aux *aux = (struct aux *)page->uninit.aux;
+    file_page->file = aux->file;
+    file_page->offset = aux->offset;
+    file_page->page_read_bytes = aux->page_read_bytes;
+
+    return true;
 }
 
 /* Swap in the page by read contents from the file. */
@@ -44,6 +52,11 @@ static bool file_backed_swap_out(struct page *page) {
 /* Destory the file backed page. PAGE will be freed by the caller. */
 static void file_backed_destroy(struct page *page) {
     struct file_page *file_page UNUSED = &page->file;
+    if (pml4_is_dirty(thread_current()->pml4, page->va)) {
+        file_write_at(file_page->file, page->va, file_page->page_read_bytes, file_page->offset);
+        pml4_set_dirty(thread_current()->pml4, page->va, false);
+    }
+    pml4_clear_page(thread_current()->pml4, page->va);
 }
 
 /** Project 3: Memory Mapped Files - Memory Mapping - Do the mmap */
