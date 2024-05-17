@@ -238,10 +238,10 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
 
 /** Project 3: Anonymous Page - Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED) {
-    struct hash_iterator i;
-    hash_first(&i, &src->spt_hash);
-    while (hash_next(&i)) {
-        struct page *src_page = hash_entry(hash_cur(&i), struct page, hash_elem);
+    struct hash_iterator iter;
+    hash_first(&iter, &src->spt_hash);
+    while (hash_next(&iter)) {
+        struct page *src_page = hash_entry(hash_cur(&iter), struct page, hash_elem);
         enum vm_type type = src_page->operations->type;
         void *upage = src_page->va;
         bool writable = src_page->writable;
