@@ -105,8 +105,7 @@ void do_munmap(void *addr) {
 
         struct aux *aux = (struct aux *)page->uninit.aux;
 
-        // 수정되었는지 확인해서 수정되었다면 file에 쓰고 비운다.
-        if(page)
+        if (page)
             destroy(page);
         addr += PGSIZE;
     }
