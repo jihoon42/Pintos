@@ -10,6 +10,7 @@
 
 #include "vm/vm.h"
 /** 반드시 vm.h 밑에 있어야 Compile Error가 사라짐 */
+#include "threads/vaddr.h"
 #include "vm/uninit.h"
 
 static bool uninit_initialize(struct page *page, void *kva);

@@ -189,7 +189,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
         return true;
 
     /** Project 3: Stack Growth */
-    void *stack_pointer = is_kernel_vaddr(f->rsp) ? thread_current()->stack_pointer : f->rsp;
+    void *stack_pointer = user ? f->rsp : thread_current()->stack_pointer;
     /* stack pointer 아래 8바이트는 페이지 폴트 발생 & addr 위치를 USER_STACK에서 1MB로 제한 */
     if (stack_pointer - 8 <= addr && addr >= STACK_LIMIT && addr <= USER_STACK) {
         vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
@@ -228,7 +228,7 @@ static bool vm_do_claim_page(struct page *page) {
     /* TODO: Insert page table entry to map page's VA to frame's PA. */
     pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable);
 
-    return swap_in(page, frame->kva);
+    return swap_in(page, frame->kva);  // uninit_initialize
 }
 
 /* Initialize new supplemental page table */
