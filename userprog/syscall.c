@@ -388,9 +388,7 @@ void check_valid_buffer(void *buffer, size_t size, void *rsp, bool writable) {
         /* buffer가 spt에 존재하는지 검사 */
         struct page *page = check_address(buffer + i);
 
-        if (page == NULL)
-            exit(-1);
-        if (writable == true && page->writable == false)
+        if (page == NULL || writable == vm_handle_wp())
             exit(-1);
     }
 }
