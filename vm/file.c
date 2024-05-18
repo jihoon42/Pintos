@@ -103,17 +103,11 @@ err:
 /** Project 3: Memory Mapped Files - Memory Mapping - Do the munmap */
 void do_munmap(void *addr) {
     struct thread *curr = thread_current();
+    struct page *page;
 
-    while (1) {
-        struct page *page = spt_find_page(&curr->spt, addr);
+    while (page = spt_find_page(&curr->spt, addr)) {
+        destroy(page);
 
-        if (page == NULL)
-            break;
-
-        struct aux *aux = (struct aux *)page->uninit.aux;
-
-        if (page)
-            destroy(page);
         addr += PGSIZE;
     }
 }
