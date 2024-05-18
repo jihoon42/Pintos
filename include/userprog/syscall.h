@@ -3,13 +3,14 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+
 #include "filesys/off_t.h"
 
 void syscall_init(void);
 
 /* Process identifier. */
 typedef int pid_t;
-#define PID_ERROR ((pid_t)-1)
+#define PID_ERROR ((pid_t) - 1)
 
 /* Maximum characters in a filename written by readdir(). */
 #define READDIR_MAX_LEN 14
@@ -19,7 +20,7 @@ typedef int pid_t;
 void check_address(void *addr);
 #else
 /** #Project 3: Anonymous Page */
-struct page* check_address(void *addr);
+struct page *check_address(void *addr);
 #endif
 
 void halt(void);
@@ -38,11 +39,12 @@ int tell(int fd);
 void close(int fd);
 
 /** Project 3: Memory Mapped Files */
-void *mmap (void *addr, size_t length, int writable, int fd, off_t offset);
-void munmap (void *addr);
+void *mmap(void *addr, size_t length, int writable, int fd, off_t offset);
+void munmap(void *addr);
 /** ------------------------------------ */
 
-
+/** #Project 2: System Call */
+extern struct lock filesys_lock;  // 파일 읽기/쓰기 용 lock
 
 /** #Project 2: Extend File Descriptor (Extra) */
 int dup2(int oldfd, int newfd);

@@ -174,10 +174,7 @@ int exec(const char *cmd_line) {
 
     memcpy(cmd_copy, cmd_line, size);
 
-    if (process_exec(cmd_copy) == -1)
-        return -1;
-
-    return 0;  // process_exec 성공시 리턴 값 없음 (do_iret)
+    return process_exec(cmd_copy);  // process_exec 성공시 리턴 값 없음 (do_iret)
 }
 
 /** #Project 2: System Call - Wait */
@@ -199,23 +196,26 @@ bool create(const char *file, unsigned initial_size) {
 bool remove(const char *file) {
     check_address(file);
 
-    return filesys_remove(file);
+    lock_acquire(&filesys_lock);
+    bool success = filesys_remove(file);
+    lock_release(&filesys_lock);
+    return success;
 }
 
 /** #Project 2: System Call - Open File */
 int open(const char *file) {
     check_address(file);
 
-    // lock_acquire(&filesys_lock);
+    lock_acquire(&filesys_lock);
     struct file *newfile = filesys_open(file);
 
     if (newfile == NULL) {
-        // lock_release(&filesys_lock);
+        lock_release(&filesys_lock);
         return -1;
     }
 
     int fd = process_add_file(newfile);
-    // lock_release(&filesys_lock);
+    lock_release(&filesys_lock);
 
     if (fd == -1)
         file_close(newfile);
