@@ -749,7 +749,7 @@ void donate_priority() {
     int priority = t->priority;
 
     for (int depth = 0; depth < 8; depth++) {
-        if (t->wait_lock == NULL)
+        if (t->wait_lock == NULL || t->wait_lock->holder == NULL)
             break;
 
         t = t->wait_lock->holder;
