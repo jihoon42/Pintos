@@ -96,7 +96,6 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
     return ori_addr;
 
 err:
-    printf("Error: do_mmap\n");
     return NULL;
 }
 
@@ -105,7 +104,7 @@ void do_munmap(void *addr) {
     struct thread *curr = thread_current();
     struct page *page;
 
-    while (page = spt_find_page(&curr->spt, addr)) {
+    while ((page = spt_find_page(&curr->spt, addr))) {
         destroy(page);
 
         addr += PGSIZE;

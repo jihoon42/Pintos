@@ -164,8 +164,8 @@ static void vm_stack_growth(void *addr UNUSED) {
 }
 
 /** Project 3: Memory Management - Handle the fault on write_protected page */
-static bool vm_handle_wp(struct page *page UNUSED) {
-    return !(page->writable);
+bool vm_handle_wp(struct page *page UNUSED) {
+    return page != NULL ? !(page->writable) : false;
 }
 
 /** Project 3: Memory Management - Return true on success */
@@ -187,7 +187,9 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
         return true;
     }
 
-    if (write == vm_handle_wp)  // write protected 인데 write 요청한 경우
+    page = spt_find_page(&thread_current()->spt, addr);
+
+    if (write & vm_handle_wp(page))  // write protected 인데 write 요청한 경우
         return false;
 
     return vm_claim_page(addr);  // demand page 수행
