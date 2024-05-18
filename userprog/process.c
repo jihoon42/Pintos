@@ -293,8 +293,6 @@ void process_exit(void) {
 
     process_cleanup();
 
-    // thread_sleep(2000); // 왜 sema up 전에 sleep 시키면 모든 test case가 통과하는가?
-
     sema_up(&curr->wait_sema);  // 자식 프로세스가 종료될 때까지 대기하는 부모에게 signal
 
     sema_down(&curr->exit_sema);  // 부모 프로세스가 종료될 떄까지 대기
