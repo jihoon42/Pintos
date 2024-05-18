@@ -189,7 +189,10 @@ int wait(pid_t tid) {
 bool create(const char *file, unsigned initial_size) {
     check_address(file);
 
-    return filesys_create(file, initial_size);
+    lock_acquire(&filesys_lock);
+    bool success = filesys_create(file, initial_size);
+    lock_release(&filesys_lock);
+    return success;
 }
 
 /** #Project 2: System Call - Remove File */
@@ -203,16 +206,19 @@ bool remove(const char *file) {
 int open(const char *file) {
     check_address(file);
 
+    // lock_acquire(&filesys_lock);
     struct file *newfile = filesys_open(file);
 
-    if (newfile == NULL)
+    if (newfile == NULL) {
+        // lock_release(&filesys_lock);
         return -1;
+    }
 
     int fd = process_add_file(newfile);
+    // lock_release(&filesys_lock);
 
     if (fd == -1)
         file_close(newfile);
-
     return fd;
 }
 
@@ -252,10 +258,8 @@ int read(int fd, void *buffer, unsigned length) {
     }
 
     // 그 외의 경우
-    off_t bytes = -1;
-
     lock_acquire(&filesys_lock);
-    bytes = file_read(file, buffer, length);
+    off_t bytes = file_read(file, buffer, length);
     lock_release(&filesys_lock);
 
     return bytes;
