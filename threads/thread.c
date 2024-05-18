@@ -749,6 +749,7 @@ void donate_priority() {
     int priority = t->priority;
 
     for (int depth = 0; depth < 8; depth++) {
+        /** Project 3 에서 child가 먼저 삭제되면 holder가 NULL이 되는 경우가 발생 */
         if (t->wait_lock == NULL || t->wait_lock->holder == NULL)
             break;
 

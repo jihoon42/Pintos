@@ -189,6 +189,7 @@ bool create(const char *file, unsigned initial_size) {
     lock_acquire(&filesys_lock);
     bool success = filesys_create(file, initial_size);
     lock_release(&filesys_lock);
+
     return success;
 }
 
@@ -199,6 +200,7 @@ bool remove(const char *file) {
     lock_acquire(&filesys_lock);
     bool success = filesys_remove(file);
     lock_release(&filesys_lock);
+
     return success;
 }
 
@@ -209,17 +211,19 @@ int open(const char *file) {
     lock_acquire(&filesys_lock);
     struct file *newfile = filesys_open(file);
 
-    if (newfile == NULL) {
-        lock_release(&filesys_lock);
-        return -1;
-    }
+    if (newfile == NULL)
+        goto err;
 
     int fd = process_add_file(newfile);
-    lock_release(&filesys_lock);
 
     if (fd == -1)
         file_close(newfile);
+
+    lock_release(&filesys_lock);
     return fd;
+err:
+    lock_release(&filesys_lock);
+    return -1;
 }
 
 /** #Project 2: System Call - Get Filesize */
