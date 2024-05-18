@@ -23,6 +23,7 @@
 
 #ifdef VM
 #include "vm/vm.h"
+#include "userprog/syscall.h"
 #endif
 
 static void process_cleanup(void);
@@ -291,6 +292,8 @@ void process_exit(void) {
     file_close(curr->runn_file);  // 현재 프로세스가 실행중인 파일 종료
 
     process_cleanup();
+    
+    // thread_sleep(2000); // 왜 sema up 전에 sleep 시키면 모든 test case가 통과하는가?
 
     sema_up(&curr->wait_sema);  // 자식 프로세스가 종료될 때까지 대기하는 부모에게 signal
 
@@ -644,12 +647,14 @@ bool lazy_load_segment(struct page *page, void *aux) {
     /* TODO: Load the segment from the file */
     /* TODO: This called when the first page fault occurs on address VA. */
     /* TODO: VA is available when calling this function. */
-    file_seek(file, offset);  // 파일을 offset부터 읽기
-
+    lock_acquire(&filesys_lock);
+    file_seek(file, offset);                                                             // 파일을 offset부터 읽기
     if (file_read(file, page->frame->kva, page_read_bytes) != (off_t)page_read_bytes) {  // 물리 메모리에서 정상적으로 읽어오는지 확인하고
         palloc_free_page(page->frame->kva);                                              // 제대로 못 읽었다면 free시키고 false 리턴
+        lock_release(&filesys_lock);
         return false;
     }
+    lock_release(&filesys_lock);
 
     memset(page->frame->kva + page_read_bytes, 0, page_zero_bytes);  // 남은 page의 데이터들은 0으로 초기화
 
