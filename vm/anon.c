@@ -38,9 +38,11 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
 
     page->operations = &anon_ops;
 
-    struct aux *aux = (struct aux *)page->uninit.aux;
-
     struct anon_page *anon_page = &page->anon;
+    /** Project 3: Swap In/Out - ERROR로 초기화  */
+    anon_page->sector = BITMAP_ERROR;
+
+    return true;
 }
 
 /* Swap in the page by read contents from the swap disk. */

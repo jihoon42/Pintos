@@ -11,7 +11,10 @@ enum vm_type;
 /** Project 3: Swap In/Out - 한 페이지를 섹터 단위로 관리 */
 #define SECTOR_SIZE (PGSIZE / DISK_SECTOR_SIZE)
 
-struct anon_page {};
+/** Project 3: Swap In/Out - Sector Indexing용 Page 구조체 선언 */
+struct anon_page {
+    size_t sector;
+};
 
 void vm_anon_init(void);
 bool anon_initializer(struct page *page, enum vm_type type, void *kva);
