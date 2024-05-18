@@ -1,13 +1,19 @@
 #ifndef VM_ANON_H
 #define VM_ANON_H
 #include "vm/vm.h"
+
+/** Project 3: Swap In/Out */
+#include "threads/vaddr.h"
+
 struct page;
 enum vm_type;
 
-struct anon_page {
-};
+/** Project 3: Swap In/Out - 한 페이지를 섹터 단위로 관리 */
+#define SECTOR_SIZE (PGSIZE / DISK_SECTOR_SIZE)
 
-void vm_anon_init (void);
-bool anon_initializer (struct page *page, enum vm_type type, void *kva);
+struct anon_page {};
+
+void vm_anon_init(void);
+bool anon_initializer(struct page *page, enum vm_type type, void *kva);
 
 #endif

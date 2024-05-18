@@ -1,5 +1,6 @@
 /* anon.c: Implementation of page for non-disk image (a.k.a. anonymous page). */
 
+#include "bitmap.h"
 #include "devices/disk.h"
 #include "vm/vm.h"
 
@@ -17,10 +18,15 @@ static const struct page_operations anon_ops = {
     .type = VM_ANON,
 };
 
+struct bitmap *swap_table;
+size_t swap_size;
+
 /* Initialize the data for anonymous pages */
 void vm_anon_init(void) {
     /* TODO: Set up the swap_disk. */
-    swap_disk = NULL;
+    swap_disk = disk_get(1, 1);
+    swap_size = disk_size(swap_disk) / SECTOR_SIZE;
+    swap_table = bitmap_create(swap_size);
 }
 
 /** Project 3: Anonymous Page - Initialize the file mapping */
@@ -31,6 +37,8 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
     memset(uninit, 0, sizeof(struct uninit_page));
 
     page->operations = &anon_ops;
+
+    struct aux *aux = (struct aux *)page->uninit.aux;
 
     struct anon_page *anon_page = &page->anon;
 }
