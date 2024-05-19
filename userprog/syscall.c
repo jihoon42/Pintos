@@ -273,23 +273,25 @@ int read(int fd, void *buffer, unsigned length) {
 int write(int fd, const void *buffer, unsigned length) {
     check_address(buffer);
 
+    lock_acquire(&filesys_lock);
     thread_t *curr = thread_current();
     off_t bytes = -1;
 
     struct file *file = process_get_file(fd);
 
     if (file == STDIN || file == NULL)  // stdin에 쓰려고 할 경우
-        return -1;
+        goto done;
 
     if (file == STDOUT || file == STDERR) {  // 1(stdout) & 2(stderr) -> console로 출력
         putbuf(buffer, length);
-        return length;
+        bytes = length;
+        goto done;
     }
 
-    lock_acquire(&filesys_lock);
     bytes = file_write(file, buffer, length);
-    lock_release(&filesys_lock);
 
+done:
+    lock_release(&filesys_lock);
     return bytes;
 }
 
@@ -318,20 +320,23 @@ void close(int fd) {
     thread_t *curr = thread_current();
     struct file *file = process_get_file(fd);
 
+
     if (file == NULL)
-        return;
+        goto done;
 
     process_close_file(fd);
 
     if (file >= STDIN && file <= STDERR) {
         file = 0;
-        return;
+        goto done;
     }
 
     if (file->dup_count == 0)
         file_close(file);
     else
         file->dup_count--;
+done:
+    return;
 }
 
 /** #Project 2: Extend File Descriptor (Extra) */
