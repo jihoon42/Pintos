@@ -51,18 +51,15 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
 static bool anon_swap_in(struct page *page, void *kva) {
     struct anon_page *anon_page = &page->anon;
     size_t sector = anon_page->sector;
+    size_t slot = sector / SECTOR_SIZE;
 
-    if (sector == BITMAP_ERROR || !bitmap_test(swap_table, sector))
+    if (sector == BITMAP_ERROR || !bitmap_test(swap_table, slot))
         return false;
 
-    page->frame->kva = kva;
-
-    bitmap_set(swap_table, sector / SECTOR_SIZE, false);
+    bitmap_set(swap_table, slot, false);
 
     for (size_t i = 0; i < SECTOR_SIZE; i++)
-        disk_read(swap_disk, sector + i, page->frame->kva + DISK_SECTOR_SIZE * i);
-
-    pml4_set_page(thread_current()->pml4, page->va, kva, true);
+        disk_read(swap_disk, sector + i, kva + DISK_SECTOR_SIZE * i);
 
     sector = BITMAP_ERROR;
 
@@ -75,15 +72,17 @@ static bool anon_swap_out(struct page *page) {
 
     size_t free_idx = bitmap_scan_and_flip(swap_table, 0, 1, false);
 
-    if (free_idx = BITMAP_ERROR)
+    if (free_idx == BITMAP_ERROR)
         return false;
 
-    size_t sector = anon_page->sector;
+    size_t sector = free_idx * SECTOR_SIZE;
 
     for (size_t i = 0; i < SECTOR_SIZE; i++)
-        disk_write(swap_disk, sector + i, page->frame->kva + DISK_SECTOR_SIZE * i);
+        disk_write(swap_disk, sector + i, page->va + DISK_SECTOR_SIZE * i);
 
     pml4_clear_page(thread_current()->pml4, page->va);
+
+    anon_page->sector = sector;
 
     page->frame->page = NULL;
     page->frame = NULL;
@@ -104,6 +103,6 @@ static void anon_destroy(struct page *page) {
     }
 
     /** Project 3: Swap In/Out - 점거중인 bitmap 삭제 */
-    if (page->anon.sector != BITMAP_ERROR)
-        bitmap_reset(swap_table, page->anon.sector);
+    if (anon_page->sector != BITMAP_ERROR)
+        bitmap_reset(swap_table, anon_page->sector / SECTOR_SIZE);
 }
