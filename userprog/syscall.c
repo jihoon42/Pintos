@@ -91,11 +91,9 @@ void syscall_handler(struct intr_frame *f UNUSED) {
             f->R.rax = filesize(f->R.rdi);
             break;
         case SYS_READ:
-            check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, true);
             f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
             break;
         case SYS_WRITE:
-            check_valid_buffer(f->R.rsi, f->R.rdx, f->rsp, false);
             f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
             break;
         case SYS_SEEK:
@@ -110,12 +108,14 @@ void syscall_handler(struct intr_frame *f UNUSED) {
         case SYS_DUP2:
             f->R.rax = dup2(f->R.rdi, f->R.rsi);
             break;
+#ifdef VM
         case SYS_MMAP:
             f->R.rax = mmap(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
             break;
         case SYS_MUNMAP:
             munmap(f->R.rdi);
             break;
+#endif
         default:
             exit(-1);
     }
@@ -124,6 +124,8 @@ void syscall_handler(struct intr_frame *f UNUSED) {
 #ifndef VM
 /** #Project 2: System Call */
 void check_address(void *addr) {
+    thread_t *curr = thread_current();
+
     if (is_kernel_vaddr(addr) || addr == NULL || pml4_get_page(curr->pml4, addr) == NULL)
         exit(-1);
 }
@@ -136,6 +138,17 @@ struct page *check_address(void *addr) {
         exit(-1);
 
     return spt_find_page(&curr->spt, addr);
+}
+
+/** Project 3: Memory Mapped Files - 버퍼 유효성 검사 */
+void check_valid_buffer(void *buffer, size_t size, bool writable) {
+    for (size_t i = 0; i < size; i++) {
+        /* buffer가 spt에 존재하는지 검사 */
+        struct page *page = check_address(buffer + i);
+
+        if (!page || (writable && !(page->writable)))
+            exit(-1);
+    }
 }
 #endif
 
@@ -238,6 +251,9 @@ int filesize(int fd) {
 
 /** #Project 2: System Call - Read File */
 int read(int fd, void *buffer, unsigned length) {
+#ifdef VM
+    check_valid_buffer(buffer, length, true);
+#endif
     check_address(buffer);
 
     thread_t *curr = thread_current();
@@ -271,6 +287,9 @@ int read(int fd, void *buffer, unsigned length) {
 
 /** #Project 2: System Call - Write File */
 int write(int fd, const void *buffer, unsigned length) {
+#ifdef VM
+    check_valid_buffer(buffer, length, false);
+#endif
     check_address(buffer);
 
     lock_acquire(&filesys_lock);
@@ -320,7 +339,6 @@ void close(int fd) {
     thread_t *curr = thread_current();
     struct file *file = process_get_file(fd);
 
-
     if (file == NULL)
         goto done;
 
@@ -360,6 +378,7 @@ int dup2(int oldfd, int newfd) {
     return newfd;
 }
 
+#ifdef VM
 /** Project 3: Memory Mapped Files - Memory Mapping */
 void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
     if (!addr || pg_round_down(addr) != addr || is_kernel_vaddr(addr) || is_kernel_vaddr(addr + length))
@@ -386,14 +405,4 @@ void *mmap(void *addr, size_t length, int writable, int fd, off_t offset) {
 void munmap(void *addr) {
     do_munmap(addr);
 }
-
-/** Project 3: Memory Mapped Files - 버퍼 유효성 검사 */
-void check_valid_buffer(void *buffer, size_t size, void *rsp, bool writable) {
-    for (size_t i = 0; i < size; i++) {
-        /* buffer가 spt에 존재하는지 검사 */
-        struct page *page = check_address(buffer + i);
-
-        if (!page || (writable && !(page->writable)))
-            exit(-1);
-    }
-}
+#endif
