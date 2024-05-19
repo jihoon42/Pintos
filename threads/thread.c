@@ -723,10 +723,11 @@ void test_max_priority(void) {
     thread_t *th = list_entry(list_front(&ready_list), thread_t, elem);
 
     if (thread_current()->priority < th->priority) {
-        /** Project 2: Panic 방지 */
+#ifdef USERPROG /** Project 2: 외부 인터럽트에 의한 thread yield 방지 */
         if (intr_context())
             intr_yield_on_return();
         else
+#endif
             thread_yield();
     }
 }
