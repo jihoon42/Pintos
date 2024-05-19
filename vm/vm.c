@@ -8,6 +8,7 @@
 #include "vm/inspect.h"
 
 static struct list frame_table;
+static struct lock frame_lock;
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -21,6 +22,7 @@ void vm_init(void) {
     /* DO NOT MODIFY UPPER LINES. */
     /* TODO: Your code goes here. */
     list_init(&frame_table);
+    lock_init(&frame_lock);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -160,36 +162,49 @@ static void vm_stack_growth(void *addr UNUSED) {
             /* stack bottom size 갱신 */
             thread_current()->stack_bottom -= PGSIZE;
         }
+        return;
     }
 }
 
 /** Project 3: Memory Management - Handle the fault on write_protected page */
 bool vm_handle_wp(struct page *page UNUSED) {
-    return page != NULL ? !(page->writable) : false;
+    void *kva = page->frame->kva;
+
+    page->frame->kva = palloc_get_page(PAL_USER);
+    memcpy(page->frame->kva, kva, PGSIZE);
+
+    if (!pml4_set_page(thread_current()->pml4, page->va, page->frame->kva, page->accessible))
+        return false;
+
+    return true;
 }
 
 /** Project 3: Memory Management - Return true on success */
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
     struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-    struct page *page = NULL;
+    struct page *page = spt_find_page(&thread_current()->spt, addr);
+
     /* TODO: Validate the fault */
     if (addr == NULL || is_kernel_vaddr(addr))
         return false;
 
-    if (!not_present)  // 접근한 메모리의 physical page가 존재하면 잘못됨
-        return false;
-
-    /** Project 3: Stack Growth - stack growth로 처리할 수 있는 경우 */
-    void *stack_pointer = user ? f->rsp : thread_current()->stack_pointer;
-    /* stack pointer 아래 8바이트는 페이지 폴트 발생 & addr 위치를 USER_STACK에서 1MB로 제한 */
-    if (stack_pointer - 8 <= addr && addr >= STACK_LIMIT && addr <= USER_STACK) {
-        vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
-        return true;
+    if (!not_present) {                           // 접근한 메모리의 physical page가 존재하면
+        if (page && write && page->accessible) {  // write protected 인데 write 요청한 경우 접근 권한이 있으면
+            return vm_handle_wp(page);
+        }
     }
 
-    page = spt_find_page(&thread_current()->spt, addr);
+    /** Project 3: Stack Growth - stack growth로 처리할 수 있는 경우 */
+    if (!page) {
+        /* stack pointer 아래 8바이트는 페이지 폴트 발생 & addr 위치를 USER_STACK에서 1MB로 제한 */
+        void *stack_pointer = user ? f->rsp : thread_current()->stack_pointer;
+        if (stack_pointer - 8 <= addr && addr >= STACK_LIMIT && addr <= USER_STACK) {
+            vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
+            return true;
+        }
+    }
 
-    if (write & vm_handle_wp(page))  // write protected 인데 write 요청한 경우
+    if (write && !page->writable)
         return false;
 
     return vm_claim_page(addr);  // demand page 수행
@@ -200,6 +215,30 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
 void vm_dealloc_page(struct page *page) {
     destroy(page);
     free(page);
+}
+
+/** Project 3: Copy On Write (Extra) - VA에 할당된 페이지를 복제. */
+static bool vm_copy_claim_page(struct supplemental_page_table *dst, void *va, void *kva, bool writable) {
+    struct page *page = spt_find_page(dst, va);
+
+    if (page == NULL)
+        return false;
+
+    struct frame *frame = (struct frame *)malloc(sizeof(struct frame));
+    /* Set links */
+
+    page->accessible = writable;
+    frame->page = page;
+    page->frame = frame;
+    frame->kva = kva;
+    lock_acquire(&frame_lock);
+    list_push_back(&frame_table, &frame->frame_elem);  // frame table에 추가
+    lock_release(&frame_lock);
+
+    if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, 0))
+        return false;
+
+    return swap_in(page, frame->kva);
 }
 
 /** Project 3: Memory Management - VA에 할당된 페이지를 요청하세요. */
@@ -222,7 +261,8 @@ static bool vm_do_claim_page(struct page *page) {
     page->frame = frame;
 
     /* TODO: Insert page table entry to map page's VA to frame's PA. */
-    pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable);
+    if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable))
+        return false;
 
     return swap_in(page, frame->kva);  // uninit_initialize
 }
@@ -235,6 +275,8 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED) {
 /** Project 3: Anonymous Page - Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED) {
     struct hash_iterator iter;
+    struct page *dst_page;
+    struct aux *aux;
 
     hash_first(&iter, &src->spt_hash);
 
@@ -244,37 +286,56 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
         void *upage = src_page->va;
         bool writable = src_page->writable;
 
-        if (type == VM_UNINIT)  // src 타입이 initialize 되지 않았을 경우
-            vm_alloc_page_with_initializer(page_get_type(src_page), upage, writable, src_page->uninit.init, src_page->uninit.aux);
+        switch (type) {
+            case VM_UNINIT:  // src 타입이 initialize 되지 않았을 경우
+                if (!vm_alloc_page_with_initializer(page_get_type(src_page), upage, writable, src_page->uninit.init, src_page->uninit.aux))
+                    goto err;
+                break;
 
-        else if (type == VM_FILE) {  // src 타입이 FILE인 경우
-            struct aux *aux = malloc(sizeof(struct aux));
-            aux->file = src_page->file.file;
-            aux->offset = src_page->file.offset;
-            aux->page_read_bytes = src_page->file.page_read_bytes;
+            case VM_FILE:  // src 타입이 FILE인 경우
+                if (!vm_alloc_page_with_initializer(type, upage, writable, NULL, &src_page->file))
+                    goto err;
 
-            if (!vm_alloc_page_with_initializer(type, upage, writable, NULL, aux))
-                return false;
+                dst_page = spt_find_page(dst, upage);  // 대응하는 물리 메모리 데이터 복제
+                if (!file_backed_initializer(dst_page, type, NULL))
+                    goto err;
 
-            struct page *dst_page = spt_find_page(dst, upage);
-            file_backed_initializer(dst_page, type, NULL);
-            dst_page->frame = src_page->frame;
-            pml4_set_page(thread_current()->pml4, dst_page->va, src_page->frame->kva, src_page->writable);
-        }
+                dst_page->frame = src_page->frame;
+                if (!pml4_set_page(thread_current()->pml4, dst_page->va, src_page->frame->kva, src_page->writable))
+                    goto err;
 
-        else {                                          // src 타입이 anon인 경우
-            if (!vm_alloc_page(type, upage, writable))  // UNINIT 페이지 생성 및 초기화
-                return false;
+                break;
 
-            if (!vm_claim_page(upage))  // 물리 메모리와 매핑하고 initialize
-                return false;
+            case VM_ANON:  // src 타입이 anon인 경우
+                // if (!vm_alloc_page(type, upage, writable))  // UNINIT 페이지 생성 및 초기화
+                //     return false;
 
-            struct page *dst_page = spt_find_page(dst, upage);  // 대응하는 물리 메모리 데이터 복제
-            memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+                // if (!vm_claim_page(upage))  // 물리 메모리와 매핑하고 initialize
+                //     return false;
+
+                // struct page *dst_page = spt_find_page(dst, upage);  // 대응하는 물리 메모리 데이터 복제
+                // memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
+
+                /** Project 3: Copy On Write (Extra) - 메모리에 load된 데이터를 write하지 않는 이상 똑같은 메모리를 사용하는데
+                 *  2개의 복사본을 만드는 것은 메모리가 낭비가 난다. 따라서 write 요청이 들어왔을 때만 해당 페이지에 대한 물리메모리를
+                 *  할당하고 맵핑하면 된다. */
+                if (!vm_alloc_page(type, upage, writable))  // UNINIT 페이지 생성 및 초기화
+                    goto err;
+
+                if (!vm_copy_claim_page(dst, upage, src_page->frame->kva, writable))  // 물리 메모리와 매핑하고 initialize
+                    goto err;
+
+                break;
+
+            default:
+                goto err;
         }
     }
 
     return true;
+
+err:
+    return false;
 }
 
 /* Free the resource hold by the supplemental page table */
