@@ -6,6 +6,7 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "userprog/process.h"
+#include "userprog/syscall.h"
 
 static bool file_backed_swap_in(struct page *page, void *kva);
 static bool file_backed_swap_out(struct page *page);
@@ -61,9 +62,15 @@ static bool file_backed_swap_out(struct page *page) {
     return true;
 }
 
-/* Destory the file backed page. PAGE will be freed by the caller. */
+/** Project 3: Anonymous Page - Destory the file backed page. PAGE will be freed by the caller. */
 static void file_backed_destroy(struct page *page) {
-    /** Project 3: Anonymous Page - 점거중인 frame 삭제 */
+    struct file_page *file_page UNUSED = &page->file;
+
+    if (pml4_is_dirty(thread_current()->pml4, page->va)) {
+        file_write_at(file_page->file, page->va, file_page->page_read_bytes, file_page->offset);
+        pml4_set_dirty(thread_current()->pml4, page->va, false);
+    }
+
     if (page->frame) {
         list_remove(&page->frame->frame_elem);
         page->frame->page = NULL;
@@ -76,6 +83,7 @@ static void file_backed_destroy(struct page *page) {
 
 /** Project 3: Memory Mapped Files - Memory Mapping - Do the mmap */
 void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t offset) {
+    lock_acquire(&filesys_lock);
     struct file *mfile = file_reopen(file);
     void *ori_addr = addr;
     size_t read_bytes = (length > file_length(mfile)) ? file_length(mfile) : length;
@@ -107,11 +115,13 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
         addr += PGSIZE;
         offset += page_read_bytes;
     }
+    lock_release(&filesys_lock);
 
     return ori_addr;
 
 err:
     free(aux);
+    lock_release(&filesys_lock);
     return NULL;
 }
 
@@ -120,10 +130,12 @@ void do_munmap(void *addr) {
     struct thread *curr = thread_current();
     struct page *page;
 
+    lock_acquire(&filesys_lock);
     while ((page = spt_find_page(&curr->spt, addr))) {
         if (page)
             destroy(page);
 
         addr += PGSIZE;
     }
+    lock_release(&filesys_lock);
 }
