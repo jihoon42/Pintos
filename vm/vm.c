@@ -143,8 +143,11 @@ static struct frame *vm_get_frame(void) {
 
     if (frame->kva == NULL)
         frame = vm_evict_frame();  // Swap Out 수행
-    else
+    else {
+        lock_acquire(&frame_lock);
         list_push_back(&frame_table, &frame->frame_elem);  // frame table에 추가
+        lock_acquire(&frame_lock);
+    }
 
     frame->page = NULL;
     ASSERT(frame->page == NULL);
@@ -162,11 +165,10 @@ static void vm_stack_growth(void *addr UNUSED) {
             /* stack bottom size 갱신 */
             thread_current()->stack_bottom -= PGSIZE;
         }
-        return;
     }
 }
 
-/** Project 3: Memory Management - Handle the fault on write_protected page */
+/** Project 3: Copy On Write (Extra) - Handle the fault on write_protected page */
 bool vm_handle_wp(struct page *page UNUSED) {
     void *kva = page->frame->kva;
 
@@ -227,10 +229,11 @@ static bool vm_copy_claim_page(struct supplemental_page_table *dst, void *va, vo
     struct frame *frame = (struct frame *)malloc(sizeof(struct frame));
     /* Set links */
 
-    page->accessible = writable;
+    page->accessible = writable;  // 접근 권한 설정
     frame->page = page;
     page->frame = frame;
     frame->kva = kva;
+
     lock_acquire(&frame_lock);
     list_push_back(&frame_table, &frame->frame_elem);  // frame table에 추가
     lock_release(&frame_lock);
@@ -306,9 +309,9 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
 
                 break;
 
-            case VM_ANON:  // src 타입이 anon인 경우
-                // if (!vm_alloc_page(type, upage, writable))  // UNINIT 페이지 생성 및 초기화
-                //     return false;
+            case VM_ANON:                                   // src 타입이 anon인 경우
+                if (!vm_alloc_page(type, upage, writable))  // UNINIT 페이지 생성 및 초기화
+                    return false;
 
                 // if (!vm_claim_page(upage))  // 물리 메모리와 매핑하고 initialize
                 //     return false;
@@ -319,9 +322,6 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
                 /** Project 3: Copy On Write (Extra) - 메모리에 load된 데이터를 write하지 않는 이상 똑같은 메모리를 사용하는데
                  *  2개의 복사본을 만드는 것은 메모리가 낭비가 난다. 따라서 write 요청이 들어왔을 때만 해당 페이지에 대한 물리메모리를
                  *  할당하고 맵핑하면 된다. */
-                if (!vm_alloc_page(type, upage, writable))  // UNINIT 페이지 생성 및 초기화
-                    goto err;
-
                 if (!vm_copy_claim_page(dst, upage, src_page->frame->kva, writable))  // 물리 메모리와 매핑하고 initialize
                     goto err;
 
