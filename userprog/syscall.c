@@ -9,7 +9,6 @@
 #include "threads/loader.h"
 #include "threads/thread.h"
 #include "userprog/gdt.h"
-#include "vm/vm.h"
 
 /** #Project 2: System Call */
 #include <string.h>
@@ -389,7 +388,7 @@ void check_valid_buffer(void *buffer, size_t size, void *rsp, bool writable) {
         /* buffer가 spt에 존재하는지 검사 */
         struct page *page = check_address(buffer + i);
 
-        if (writable & vm_handle_wp(page))
+        if (!page || (writable && !(page->writable)))
             exit(-1);
     }
 }
