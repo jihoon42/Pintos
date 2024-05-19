@@ -8,7 +8,6 @@
 #include "vm/inspect.h"
 
 static struct list frame_table;
-static struct lock frame_lock;
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -22,7 +21,6 @@ void vm_init(void) {
     /* DO NOT MODIFY UPPER LINES. */
     /* TODO: Your code goes here. */
     list_init(&frame_table);
-    lock_init(&frame_lock);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -144,9 +142,7 @@ static struct frame *vm_get_frame(void) {
     if (frame->kva == NULL)
         frame = vm_evict_frame();  // Swap Out 수행
     else {
-        lock_acquire(&frame_lock);
         list_push_back(&frame_table, &frame->frame_elem);  // frame table에 추가
-        lock_acquire(&frame_lock);
     }
 
     frame->page = NULL;
@@ -234,9 +230,7 @@ static bool vm_copy_claim_page(struct supplemental_page_table *dst, void *va, vo
     page->frame = frame;
     frame->kva = kva;
 
-    lock_acquire(&frame_lock);
     list_push_back(&frame_table, &frame->frame_elem);  // frame table에 추가
-    lock_release(&frame_lock);
 
     if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, 0))
         return false;
