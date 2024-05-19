@@ -80,19 +80,22 @@ static bool anon_swap_out(struct page *page) {
     for (size_t i = 0; i < SECTOR_SIZE; i++)
         disk_write(swap_disk, sector + i, page->va + DISK_SECTOR_SIZE * i);
 
-    pml4_clear_page(thread_current()->pml4, page->va);
-
     anon_page->sector = sector;
 
     page->frame->page = NULL;
     page->frame = NULL;
+    pml4_clear_page(thread_current()->pml4, page->va);
 
     return true;
 }
 
-/* Destroy the anonymous page. PAGE will be freed by the caller. */
+/** Project 3: Swap In/Out - Destroy the anonymous page. PAGE will be freed by the caller. */
 static void anon_destroy(struct page *page) {
     struct anon_page *anon_page = &page->anon;
+
+    /** Project 3: Swap In/Out - 점거중인 bitmap 삭제 */
+    if (anon_page->sector != BITMAP_ERROR)
+        bitmap_reset(swap_table, anon_page->sector / SECTOR_SIZE);
 
     /** Project 3: Anonymous Page - 점거중인 frame 삭제 */
     if (page->frame) {
@@ -102,7 +105,4 @@ static void anon_destroy(struct page *page) {
         free(page->frame);
     }
 
-    /** Project 3: Swap In/Out - 점거중인 bitmap 삭제 */
-    if (anon_page->sector != BITMAP_ERROR)
-        bitmap_reset(swap_table, anon_page->sector / SECTOR_SIZE);
 }

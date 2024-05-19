@@ -39,23 +39,38 @@ bool file_backed_initializer(struct page *page, enum vm_type type, void *kva) {
     return true;
 }
 
-/* Swap in the page by read contents from the file. */
+/** Project 3: Swap In/Out - Swap in the page by read contents from the file. */
 static bool file_backed_swap_in(struct page *page, void *kva) {
     struct file_page *file_page UNUSED = &page->file;
+
+    return lazy_load_segment(page, file_page);
 }
 
-/* Swap out the page by writeback contents to the file. */
+/** Project 3: Swap In/Out - Swap out the page by writeback contents to the file. */
 static bool file_backed_swap_out(struct page *page) {
-    struct file_page *file_page UNUSED = &page->file;
-}
-
-/* Destory the file backed page. PAGE will be freed by the caller. */
-static void file_backed_destroy(struct page *page) {
     struct file_page *file_page UNUSED = &page->file;
     if (pml4_is_dirty(thread_current()->pml4, page->va)) {
         file_write_at(file_page->file, page->va, file_page->page_read_bytes, file_page->offset);
         pml4_set_dirty(thread_current()->pml4, page->va, false);
     }
+
+    page->frame->page = NULL;
+    page->frame = NULL;
+    pml4_clear_page(thread_current()->pml4, page->va);
+
+    return true;
+}
+
+/* Destory the file backed page. PAGE will be freed by the caller. */
+static void file_backed_destroy(struct page *page) {
+    /** Project 3: Anonymous Page - 점거중인 frame 삭제 */
+    if (page->frame) {
+        list_remove(&page->frame->frame_elem);
+        page->frame->page = NULL;
+        page->frame = NULL;
+        free(page->frame);
+    }
+
     pml4_clear_page(thread_current()->pml4, page->va);
 }
 
@@ -70,11 +85,12 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
     ASSERT(pg_ofs(addr) == 0);
     ASSERT(offset % PGSIZE == 0);
 
+    struct aux *aux;
     while (read_bytes > 0 || zero_bytes > 0) {
         size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
         size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-        struct aux *aux = (struct aux *)malloc(sizeof(struct aux));
+        aux = (struct aux *)malloc(sizeof(struct aux));
         if (!aux)
             goto err;
 
@@ -83,7 +99,6 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
         aux->page_read_bytes = page_read_bytes;
 
         if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, aux)) {
-            free(aux);
             goto err;
         }
 
@@ -96,6 +111,7 @@ void *do_mmap(void *addr, size_t length, int writable, struct file *file, off_t 
     return ori_addr;
 
 err:
+    free(aux);
     return NULL;
 }
 
@@ -105,7 +121,8 @@ void do_munmap(void *addr) {
     struct page *page;
 
     while ((page = spt_find_page(&curr->spt, addr))) {
-        destroy(page);
+        if (page)
+            destroy(page);
 
         addr += PGSIZE;
     }
