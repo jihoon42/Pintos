@@ -304,8 +304,7 @@ static void process_cleanup(void) {
 
 #ifdef VM
     supplemental_page_table_kill(&curr->spt);
-#endif
-
+#else
     uint64_t *pml4;
     /* Destroy the current process's page directory and switch back
      * to the kernel-only page directory. */
@@ -322,6 +321,7 @@ static void process_cleanup(void) {
         pml4_activate(NULL);
         pml4_destroy(pml4);
     }
+#endif
 }
 
 /* Sets up the CPU for running user code in the nest thread.
@@ -387,7 +387,7 @@ struct ELF64_PHDR {
 #define ELF  ELF64_hdr
 #define Phdr ELF64_PHDR
 
-bool setup_stack(struct intr_frame *if_);
+static bool setup_stack(struct intr_frame *if_);
 static bool validate_segment(const struct Phdr *, struct file *);
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
@@ -708,7 +708,7 @@ static bool load_segment(struct file *file, off_t ofs, uint8_t *upage, uint32_t 
 }
 
 /** Project 3: Anonymous Page - Create a PAGE of stack at the USER_STACK. Return true on success. */
-bool setup_stack(struct intr_frame *if_) {
+static bool setup_stack(struct intr_frame *if_) {
     bool success = false;
     void *stack_bottom = (void *)(((uint8_t *)USER_STACK) - PGSIZE);
 
