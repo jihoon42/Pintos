@@ -50,6 +50,7 @@ struct page {
 
     /** Project 3: Memory Management - Your implementation */
     struct hash_elem hash_elem;
+    bool accessible;
     bool writable;
 
     /* Per-type data are binded into the union.
