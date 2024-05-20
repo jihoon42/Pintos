@@ -312,10 +312,10 @@ bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, st
 
             case VM_ANON:                                   // src 타입이 anon인 경우
                 if (!vm_alloc_page(type, upage, writable))  // UNINIT 페이지 생성 및 초기화
-                    return false;
+                    goto err;
 
                 // if (!vm_claim_page(upage))  // 물리 메모리와 매핑하고 initialize
-                //     return false;
+                //     goto err;
 
                 // struct page *dst_page = spt_find_page(dst, upage);  // 대응하는 물리 메모리 데이터 복제
                 // memcpy(dst_page->frame->kva, src_page->frame->kva, PGSIZE);
