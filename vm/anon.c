@@ -21,14 +21,14 @@ static const struct page_operations anon_ops = {
 };
 
 struct bitmap *swap_table;
-size_t swap_size;
+size_t slot_max;
 
 /* Initialize the data for anonymous pages */
 void vm_anon_init(void) {
     /* TODO: Set up the swap_disk. */
     swap_disk = disk_get(1, 1);
-    swap_size = disk_size(swap_disk) / SECTOR_SIZE;
-    swap_table = bitmap_create(swap_size);
+    slot_max = disk_size(swap_disk) / SLOT_SIZE;
+    swap_table = bitmap_create(slot_max);
 }
 
 /** Project 3: Anonymous Page - Initialize the file mapping */
@@ -42,7 +42,7 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
 
     struct anon_page *anon_page = &page->anon;
     /** Project 3: Swap In/Out - ERROR로 초기화  */
-    anon_page->sector = BITMAP_ERROR;
+    anon_page->slot = BITMAP_ERROR;
 
     return true;
 }
@@ -50,15 +50,15 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva) {
 /** Project 3: Swap In/Out - Swap in the page by read contents from the swap disk. */
 static bool anon_swap_in(struct page *page, void *kva) {
     struct anon_page *anon_page = &page->anon;
-    size_t sector = anon_page->sector;
-    size_t slot = sector / SECTOR_SIZE;
+    size_t slot = anon_page->slot;
+    size_t sector = slot * SLOT_SIZE;
 
-    if (sector == BITMAP_ERROR || !bitmap_test(swap_table, slot))
+    if (slot == BITMAP_ERROR || !bitmap_test(swap_table, slot))
         return false;
 
     bitmap_set(swap_table, slot, false);
 
-    for (size_t i = 0; i < SECTOR_SIZE; i++)
+    for (size_t i = 0; i < SLOT_SIZE; i++)
         disk_read(swap_disk, sector + i, kva + DISK_SECTOR_SIZE * i);
 
     sector = BITMAP_ERROR;
@@ -75,12 +75,12 @@ static bool anon_swap_out(struct page *page) {
     if (free_idx == BITMAP_ERROR)
         return false;
 
-    size_t sector = free_idx * SECTOR_SIZE;
+    size_t sector = free_idx * SLOT_SIZE;
 
-    for (size_t i = 0; i < SECTOR_SIZE; i++)
+    for (size_t i = 0; i < SLOT_SIZE; i++)
         disk_write(swap_disk, sector + i, page->va + DISK_SECTOR_SIZE * i);
 
-    anon_page->sector = sector;
+    anon_page->slot = free_idx;
 
     page->frame->page = NULL;
     page->frame = NULL;
@@ -94,8 +94,8 @@ static void anon_destroy(struct page *page) {
     struct anon_page *anon_page = &page->anon;
 
     /** Project 3: Swap In/Out - 점거중인 bitmap 삭제 */
-    if (anon_page->sector != BITMAP_ERROR)
-        bitmap_reset(swap_table, anon_page->sector / SECTOR_SIZE);
+    if (anon_page->slot != BITMAP_ERROR)
+        bitmap_reset(swap_table, anon_page->slot);
 
     /** Project 3: Anonymous Page - 점거중인 frame 삭제 */
     if (page->frame) {
@@ -104,5 +104,4 @@ static void anon_destroy(struct page *page) {
         page->frame = NULL;
         free(page->frame);
     }
-
 }
