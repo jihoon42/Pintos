@@ -189,7 +189,8 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
     if (addr == NULL || is_kernel_vaddr(addr))
         return false;
 
-    if (!not_present && page && write)  // 접근한 메모리의 physical page가 존재하고 write 요청인데 write protected인 경우라 발생한 요청일 경우
+    /** Project 3: Copy On Write (Extra) */
+    if (!not_present && page && write)  // 접근한 메모리의 physical page가 존재하고 write 요청인데 write protected인 경우라 발생한 fault일 경우
         return vm_handle_wp(page);
 
     /** Project 3: Stack Growth - stack growth로 처리할 수 있는 경우 */
