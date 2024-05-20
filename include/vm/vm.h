@@ -50,8 +50,8 @@ struct page {
 
     /** Project 3: Memory Management - Your implementation */
     struct hash_elem hash_elem;
-    bool accessible; /** Project 3: Copy On Write (Extra) */
     bool writable;
+    bool accessible; /** Project 3: Copy On Write (Extra) */
 
     /* Per-type data are binded into the union.
      * Each function automatically detects the current union */
