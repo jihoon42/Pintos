@@ -231,11 +231,14 @@ static bool vm_copy_claim_page(struct supplemental_page_table *dst, void *va, vo
     frame->page = page;
     page->frame = frame;
     frame->kva = kva;
+    
+    if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, 0)) {
+        free(frame);
+        return false;
+    }
 
     list_push_back(&frame_table, &frame->frame_elem);  // frame table에 추가
 
-    if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, 0))
-        return false;
 
     return swap_in(page, frame->kva);
 }
