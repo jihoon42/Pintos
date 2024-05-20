@@ -193,21 +193,16 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
         return false;
 
     /** Project 3: Copy On Write (Extra) */
-    if (!not_present && page && write)  // 접근한 메모리의 physical page가 존재하고 write 요청인데 write protected인 경우라 발생한 fault일 경우
+    if (!not_present && write)  // 접근한 메모리의 page가 존재하고 write 요청인데 write protected인 경우라 발생한 fault일 경우
         return vm_handle_wp(page);
 
     /** Project 3: Stack Growth - stack growth로 처리할 수 있는 경우 */
-    if (!page) {
-        /* stack pointer 아래 8바이트는 페이지 폴트 발생 & addr 위치를 USER_STACK에서 1MB로 제한 */
-        void *stack_pointer = user ? f->rsp : thread_current()->stack_pointer;
-        if (stack_pointer - 8 <= addr && addr >= STACK_LIMIT && addr <= USER_STACK) {
-            vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
-            return true;
-        }
+    /* stack pointer 아래 8바이트는 페이지 폴트 발생 & addr 위치를 USER_STACK에서 1MB로 제한 */
+    void *stack_pointer = user ? f->rsp : thread_current()->stack_pointer;
+    if (stack_pointer - 8 <= addr && addr >= STACK_LIMIT && addr <= USER_STACK) {
+        vm_stack_growth(thread_current()->stack_bottom - PGSIZE);
+        return true;
     }
-
-    if (write && !page->writable)
-        return false;
 
     return vm_claim_page(addr);  // demand page 수행
 }
@@ -227,11 +222,11 @@ static bool vm_copy_claim_page(struct supplemental_page_table *dst, void *va, vo
         return false;
 
     struct frame *frame = (struct frame *)malloc(sizeof(struct frame));
-    
+
     if (!frame)
         return false;
-    /* Set links */
 
+    /* Set links */
     page->accessible = writable;  // 접근 권한 설정
     frame->page = page;
     page->frame = frame;
