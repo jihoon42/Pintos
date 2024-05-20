@@ -105,5 +105,6 @@ static void anon_destroy(struct page *page) {
         page->frame = NULL;
     }
 
+    /** Project 3: Copy on Write (Extra) - destroy 시 pml4 clear  */
     pml4_clear_page(thread_current()->pml4, page->va);
 }
