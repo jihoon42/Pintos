@@ -105,6 +105,7 @@ static void anon_destroy(struct page *page) {
         page->frame = NULL;
     }
 
-    /** Project 3: Copy on Write (Extra) - destroy 시 pml4 clear  */
+    /** Project 3: Copy on Write (Extra) - destroy 시 pml4 clear하여 참조하던 kva들을 모두 해제한다.
+     * 그렇지 않으면 자식에서 `exit`시 참조한 부모의 kva가 파괴되어 자식이 부모에서 해당 kva에 접근할 수 없기 때문이다. */
     pml4_clear_page(thread_current()->pml4, page->va);
 }

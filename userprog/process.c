@@ -304,10 +304,6 @@ static void process_cleanup(void) {
 
 #ifdef VM
     supplemental_page_table_kill(&curr->spt);
-    /** Project 3: Copy On Write (Extra) - Process_cleanup에서 page를 파괴하는 것이 아니라 page_destruction에서
-     * clear만 시킨 상태로 보존해야 한다. 그렇지 않으면 자식에서 참조한 부모의 kva가 파괴되어 자식이 exit 한 후
-     * 부모에서 해당 kva에 접근할 수 없기 때문이다. */
-    return;
 #endif
     uint64_t *pml4;
     /* Destroy the current process's page directory and switch back
