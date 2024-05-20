@@ -117,7 +117,7 @@ static struct frame *vm_get_victim(void) {
             return victim;
     }
 
-    return victim;
+    return list_entry(list_begin(&frame_table), struct frame, frame_elem);
 }
 
 /** Project 3: Memory Management - 한 페이지를 제거하고 해당 프레임을 반환합니다. 오류가 발생하면 NULL을 반환합니다.*/
@@ -231,14 +231,13 @@ static bool vm_copy_claim_page(struct supplemental_page_table *dst, void *va, vo
     frame->page = page;
     page->frame = frame;
     frame->kva = kva;
-    
+
     if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, 0)) {
         free(frame);
         return false;
     }
 
     list_push_back(&frame_table, &frame->frame_elem);  // frame table에 추가
-
 
     return swap_in(page, frame->kva);
 }
