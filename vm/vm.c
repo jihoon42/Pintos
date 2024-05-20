@@ -141,9 +141,8 @@ static struct frame *vm_get_frame(void) {
 
     if (frame->kva == NULL)
         frame = vm_evict_frame();  // Swap Out 수행
-    else {
+    else
         list_push_back(&frame_table, &frame->frame_elem);  // frame table에 추가
-    }
 
     frame->page = NULL;
     ASSERT(frame->page == NULL);
@@ -172,6 +171,10 @@ bool vm_handle_wp(struct page *page UNUSED) {
     void *kva = page->frame->kva;
 
     page->frame->kva = palloc_get_page(PAL_USER);
+
+    if (page->frame->kva == NULL)
+        page->frame = vm_evict_frame();  // Swap Out 수행
+
     memcpy(page->frame->kva, kva, PGSIZE);
 
     if (!pml4_set_page(thread_current()->pml4, page->va, page->frame->kva, page->accessible))
@@ -224,6 +227,9 @@ static bool vm_copy_claim_page(struct supplemental_page_table *dst, void *va, vo
         return false;
 
     struct frame *frame = (struct frame *)malloc(sizeof(struct frame));
+    
+    if (!frame)
+        return false;
     /* Set links */
 
     page->accessible = writable;  // 접근 권한 설정
