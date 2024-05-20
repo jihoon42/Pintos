@@ -235,7 +235,7 @@ static bool vm_copy_claim_page(struct supplemental_page_table *dst, void *va, vo
     page->frame = frame;
     frame->kva = kva;
 
-    if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, 0)) {
+    if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, false)) {
         free(frame);
         return false;
     }
