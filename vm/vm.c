@@ -196,7 +196,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED, bool us
     if (!not_present && write)
         return vm_handle_wp(page);
 
-    /** Project 3: Copy On Write (Extra) - 이전에 만들었던 페이지인데 child가 먼저 종료되어서 spt에서 삭제하였을 때 stack_growth 대신 claim_page를 하기 위함 */
+    /** Project 3: Copy On Write (Extra) - 이전에 만들었던 페이지인데 child가 먼저 종료되어서 spt에서 삭제하였을 때 stack_growth 대신 claim_page를 하기 위해 조건 분기 */
     if (!page) {
         /** Project 3: Stack Growth - stack growth로 처리할 수 있는 경우 */
         /* stack pointer 아래 8바이트는 페이지 폴트 발생 & addr 위치를 USER_STACK에서 1MB로 제한 */
