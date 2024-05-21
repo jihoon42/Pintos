@@ -137,7 +137,7 @@ static struct frame *vm_get_frame(void) {
     struct frame *frame = (struct frame *)malloc(sizeof(struct frame));
     ASSERT(frame != NULL);
 
-    frame->kva = palloc_get_page(PAL_USER);  // 유저 풀(실제 메모리)에서 페이지를 할당 받는다.
+    frame->kva = palloc_get_page(PAL_USER | PAL_ZERO);  // 유저 풀(실제 메모리)에서 페이지를 할당 받는다.
 
     if (frame->kva == NULL)
         frame = vm_evict_frame();  // Swap Out 수행
@@ -170,7 +170,7 @@ bool vm_handle_wp(struct page *page UNUSED) {
 
     void *kva = page->frame->kva;
 
-    page->frame->kva = palloc_get_page(PAL_USER);
+    page->frame->kva = palloc_get_page(PAL_USER | PAL_ZERO);
 
     if (page->frame->kva == NULL)
         page->frame = vm_evict_frame();  // Swap Out 수행
