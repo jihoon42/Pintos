@@ -201,10 +201,20 @@ cluster_t fat_create_chain(cluster_t clst) {
     return empty_clst;
 }
 
-/* Remove the chain of clusters starting from CLST.
+/** Project 4: Indexed and Extensible Files - Remove the chain of clusters starting from CLST.
  * If PCLST is 0, assume CLST as the start of the chain. */
 void fat_remove_chain(cluster_t clst, cluster_t pclst) {
     /* TODO: Your code goes here. */
+    cluster_t target = clst;
+
+    while (fat_get(target) != EOChain && fat_get(target) != 0) {
+        cluster_t next = fat_get(target);
+        fat_put(target, 0);
+        target = next;
+    }
+
+    if (!pclst)
+        fat_put(pclst, EOChain);
 }
 
 /** Project 4: Indexed and Extensible Files - Update a value in the FAT table. */
