@@ -20,8 +20,9 @@
 #include "userprog/process.h"
 /** -----------------------  */
 
-/** #Project 4:  */
+/** #Project 4: Subdirectories and Soft Links */
 #include "filesys/directory.h"
+#include "filesys/inode.h"
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
@@ -133,6 +134,9 @@ void syscall_handler(struct intr_frame *f UNUSED) {
             break;
         case SYS_INUMBER:
             f->R.rax = inumber(f->R.rdi);
+            break;
+        case SYS_SYMLINK:
+            f->R.rax = symlink(f->R.rdi, f->R.rsi);
             break;
         default:
             exit(-1);
@@ -424,3 +428,44 @@ void munmap(void *addr) {
     do_munmap(addr);
 }
 #endif
+
+/** #Project 4: Subdirectories - Changes the current working directory of the process to dir, which may be relative or absolute. */
+bool chdir(const char *dir) {
+    return filesys_chdir(dir);
+}
+
+/** #Project 4: Subdirectories - Creates the directory named dir, which may be relative or absolute. */
+bool mkdir(const char *dir) {
+    return filesys_mkdir(dir);
+}
+
+/** #Project 4: Subdirectories - Reads a directory entry from file descriptor fd, which must represent a directory. */
+bool readdir(int fd, char name[READDIR_MAX_LEN + 1]) {
+    struct file *file = process_get_file(fd);
+
+    if (!file || !inode_is_dir(file->inode))
+        return false;
+
+    struct dir *dir = file;
+
+    return dir_readdir(dir, name);
+}
+
+/** #Project 4: Subdirectories - Returns true if fd represents a directory, false if it represents an ordinary file. */
+bool isdir(int fd) {
+    struct file *file = process_get_file(fd);
+
+    return inode_is_directory(file->inode);
+}
+
+/** #Project 4: Subdirectories - Returns the inode number of the inode associated with fd, which may represent an ordinary file or a directory. */
+int inumber(int fd) {
+    struct file *file = process_get_file(fd);
+
+    return inode_get_inumber(file->inode);
+}
+
+/** #Project 4: Soft Links - Creates a symbolic link named linkpath which contains the string target. */
+int symlink(const char *target, const char *linkpath) {
+    return -1; // false
+}
