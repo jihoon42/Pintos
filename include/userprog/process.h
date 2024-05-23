@@ -2,7 +2,6 @@
 #define USERPROG_PROCESS_H
 
 #include "threads/thread.h"
-#include "filesys/off_t.h"
 
 tid_t process_create_initd(const char *file_name);
 tid_t process_fork(const char *name, struct intr_frame *if_);
@@ -25,13 +24,13 @@ int process_insert_file(int fd, struct file *f);
 bool lazy_load_segment(struct page *page, void *aux);
 
 /** Project 3: Anonymous Page */
-struct aux{
+struct aux {
     struct file *file;
     off_t offset;
     size_t page_read_bytes;
 };
 
-#define STDIN 1
+#define STDIN  1
 #define STDOUT 2
 #define STDERR 3
 

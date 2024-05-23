@@ -148,6 +148,9 @@ typedef struct thread {
     void *stack_pointer;
 #endif
 
+    /** Project 4: Filesys - Subdirectories and Soft Links */
+    struct dir *cwd; // Current Working Directory
+
     /* Owned by thread.c. */
     struct intr_frame tf; /* Information for switching */
     unsigned magic;       /* Detects stack overflow. */
