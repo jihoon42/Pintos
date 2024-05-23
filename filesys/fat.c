@@ -156,12 +156,49 @@ void fat_fs_init(void) {
 /*----------------------------------------------------------------------------*/
 /* FAT handling                                                               */
 /*----------------------------------------------------------------------------*/
+cluster_t get_empty_cluster(void) {
+    cluster_t clst = fat_fs->bs.root_dir_cluster + 2;
+    cluster_t fat_length = fat_fs->fat_length;
+
+    for (clst; clst < fat_length; clst++) {
+        if (fat_get(clst) == 0)
+            return clst;
+    }
+
+    return 0;
+}
 
 /* Add a cluster to the chain.
  * If CLST is 0, start a new chain.
  * Returns 0 if fails to allocate a new cluster. */
 cluster_t fat_create_chain(cluster_t clst) {
     /* TODO: Your code goes here. */
+    if (clst == EOChain)
+        return 0;
+
+    cluster_t empty_clst = get_empty_cluster();
+
+    if (!empty_clst)  // 빈 clst가 없을 때
+        return 0;
+
+    if (clst == 0)  // clst가 0일 때 새로운 chain 만들기
+        fat_put(empty_clst, EOChain);
+    else {
+        cluster_t tmp = clst;
+
+        while (1) {
+            if (fat_get(tmp) != EOChain) {
+                tmp = fat_get(tmp);  // 다음 체인 가져오기
+                continue;
+            }
+
+            fat_put(tmp, empty_clst);
+            fat_put(empty_clst, EOChain);
+            break;
+        }
+    }
+
+    return empty_clst;
 }
 
 /* Remove the chain of clusters starting from CLST.
@@ -170,14 +207,16 @@ void fat_remove_chain(cluster_t clst, cluster_t pclst) {
     /* TODO: Your code goes here. */
 }
 
-/* Update a value in the FAT table. */
+/** Project 4: Indexed and Extensible Files - Update a value in the FAT table. */
 void fat_put(cluster_t clst, cluster_t val) {
     /* TODO: Your code goes here. */
+    fat_fs->fat[clst] = val;
 }
 
-/* Fetch a value in the FAT table. */
+/** Project 4: Indexed and Extensible Files - Fetch a value in the FAT table. */
 cluster_t fat_get(cluster_t clst) {
     /* TODO: Your code goes here. */
+    return fat_fs->fat[clst];
 }
 
 /** Project 4: Indexed and Extensible Files - Covert a cluster # to a sector number.
