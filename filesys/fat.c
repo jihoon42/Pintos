@@ -143,11 +143,14 @@ void fat_boot_create(void) {
     };
 }
 
-/** Project 4: Indexed and Extensible Files */
+/** Project 4: Indexed and Extensible Files - filesys 초기화
+ * 당신은 fat_fs의 fat_length와 data_start 필드를 초기화해야 합니다. fat_length는 파일시스템에 몇 개의 클러스터가 있는지에 대한 정보를 저장하고,
+ * data_start는 어떤 섹터에서 파일 저장을 시작할 수 있는지에 대한 정보를 저장합니다. 당신은 어쩌면 fat_fs->bs 에 저장된 값을 이용하고 싶어질 수도
+ * 있습니다. 또한, 이 함수에서 다른 유용한 데이터를 초기화하고 싶어질수도 있습니다. */
 void fat_fs_init(void) {
     /* TODO: Your code goes here. */
     fat_fs->data_start = fat_fs->bs.fat_sectors + fat_fs->bs.fat_start;
-    fat_fs->fat_length = sector_to_cluster(disk_size(filesys_disk)) - 1;
+    fat_fs->fat_length = sector_to_cluster(disk_size(filesys_disk));
 }
 
 /*----------------------------------------------------------------------------*/
@@ -177,7 +180,14 @@ cluster_t fat_get(cluster_t clst) {
     /* TODO: Your code goes here. */
 }
 
-/* Covert a cluster # to a sector number. */
+/** Project 4: Indexed and Extensible Files - Covert a cluster # to a sector number.
+ * 클러스터 넘버 clst를 상응하는 섹터 넘버로 변환하고, 그 섹터 넘버를 리턴합니다. */
 disk_sector_t cluster_to_sector(cluster_t clst) {
     /* TODO: Your code goes here. */
+    return fat_fs->data_start + clst * SECTORS_PER_CLUSTER;
+}
+
+/** Project 4: Indexed and Extensible Files - 섹터 넘버를 clst로 변환해서 리턴 */
+cluster_t sector_to_cluster(disk_sector_t sctr) {
+    return sctr - fat_fs->data_start;
 }
