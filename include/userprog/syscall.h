@@ -41,7 +41,12 @@ void close(int fd);
 /** Project 3: Memory Mapped Files */
 void *mmap(void *addr, size_t length, int writable, int fd, off_t offset);
 void munmap(void *addr);
-/** ------------------------------------ */
+
+/** Project 4: Subdirectories */
+bool isdir(int fd);
+bool chdir (const char *dir);
+bool mkdir (const char *dir);
+bool readdir (int fd, char name[READDIR_MAX_LEN + 1]);
 
 /** #Project 2: System Call */
 extern struct lock filesys_lock;  // 파일 읽기/쓰기 용 lock

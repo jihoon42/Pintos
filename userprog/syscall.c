@@ -20,6 +20,9 @@
 #include "userprog/process.h"
 /** -----------------------  */
 
+/** #Project 4:  */
+#include "filesys/directory.h"
+
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
 
@@ -116,6 +119,21 @@ void syscall_handler(struct intr_frame *f UNUSED) {
             munmap(f->R.rdi);
             break;
 #endif
+        case SYS_ISDIR:
+            f->R.rax = isdir(f->R.rdi);
+            break;
+        case SYS_CHDIR:
+            f->R.rax = chdir(f->R.rdi);
+            break;
+        case SYS_MKDIR:
+            f->R.rax = mkdir(f->R.rdi);
+            break;
+        case SYS_READDIR:
+            f->R.rax = readdir(f->R.rdi, f->R.rsi);
+            break;
+        case SYS_INUMBER:
+            f->R.rax = inumber(f->R.rdi);
+            break;
         default:
             exit(-1);
     }
