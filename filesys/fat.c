@@ -150,12 +150,13 @@ void fat_boot_create(void) {
 void fat_fs_init(void) {
     /* TODO: Your code goes here. */
     fat_fs->data_start = fat_fs->bs.fat_sectors + fat_fs->bs.fat_start;
-    fat_fs->fat_length = sector_to_cluster(disk_size(filesys_disk));
+    fat_fs->fat_length = disk_size(filesys_disk) - 1 - fat_fs->bs.fat_sectors;
 }
 
 /*----------------------------------------------------------------------------*/
 /* FAT handling                                                               */
 /*----------------------------------------------------------------------------*/
+/** Project 4: Indexed and Extensible Files */
 cluster_t get_empty_cluster(void) {
     cluster_t clst = fat_fs->bs.root_dir_cluster + 2;
     cluster_t fat_length = fat_fs->fat_length;
@@ -181,23 +182,19 @@ cluster_t fat_create_chain(cluster_t clst) {
     if (!empty_clst)  // 빈 clst가 없을 때
         return 0;
 
-    if (clst == 0)  // clst가 0일 때 새로운 chain 만들기
-        fat_put(empty_clst, EOChain);
-    else {
-        cluster_t tmp = clst;
+    fat_put(empty_clst, EOChain);
 
-        while (1) {
-            if (fat_get(tmp) != EOChain) {
-                tmp = fat_get(tmp);  // 다음 체인 가져오기
-                continue;
-            }
+    if (clst == 0)  // empty cluster에 새로운 cluster 생성
+        goto done;
 
-            fat_put(tmp, empty_clst);
-            fat_put(empty_clst, EOChain);
-            break;
-        }
-    }
+    cluster_t tmp = clst;
 
+    while (fat_get(tmp) != EOChain)
+        tmp = fat_get(tmp);
+
+    fat_put(tmp, empty_clst);  // 기존 cluster chain의 마지막에 cluster 추가
+
+done:
     return empty_clst;
 }
 
@@ -207,13 +204,13 @@ void fat_remove_chain(cluster_t clst, cluster_t pclst) {
     /* TODO: Your code goes here. */
     cluster_t target = clst;
 
-    while (fat_get(target) != EOChain && fat_get(target) != 0) {
+    while (fat_get(target) != EOChain) {  // 순회하면서 FAT에서 할당 해제
         cluster_t next = fat_get(target);
         fat_put(target, 0);
         target = next;
     }
 
-    if (!pclst)
+    if (!pclst)  // pcluster가 입력됬으면 pcluster를 chain으로 끝으로 만듬 */
         fat_put(pclst, EOChain);
 }
 
@@ -233,10 +230,12 @@ cluster_t fat_get(cluster_t clst) {
  * 클러스터 넘버 clst를 상응하는 섹터 넘버로 변환하고, 그 섹터 넘버를 리턴합니다. */
 disk_sector_t cluster_to_sector(cluster_t clst) {
     /* TODO: Your code goes here. */
-    return fat_fs->data_start + clst * SECTORS_PER_CLUSTER;
+    return fat_fs->data_start + clst;
 }
 
 /** Project 4: Indexed and Extensible Files - 섹터 넘버를 clst로 변환해서 리턴 */
 cluster_t sector_to_cluster(disk_sector_t sctr) {
-    return sctr - fat_fs->data_start;
+    cluster_t clst = sctr - fat_fs->data_start;
+
+    return clst < 2 ? 0 : clst;
 }
