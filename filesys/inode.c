@@ -63,6 +63,7 @@ void inode_init(void) {
     list_init(&open_inodes);
 }
 
+#ifdef FILESYS
 /** #Project 4: Subdirectories - Initializes an inode with LENGTH bytes of data and writes
  * the new inode to sector SECTOR on the file system disk.
  * Returns true if successful.
@@ -111,44 +112,45 @@ bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
     }
     return success;
 }
-
+#else
 /* Initializes an inode with LENGTH bytes of data and
  * writes the new inode to sector SECTOR on the file system
  * disk.
  * Returns true if successful.
  * Returns false if memory or disk allocation fails. */
-// bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {    
-//     struct inode_disk *disk_inode = NULL;
-//     bool success = false;
+bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {    
+    struct inode_disk *disk_inode = NULL;
+    bool success = false;
 
-//     ASSERT(length >= 0);
+    ASSERT(length >= 0);
 
-//     /* If this assertion fails, the inode structure is not exactly
-//      * one sector in size, and you should fix that. */
-//     ASSERT(sizeof *disk_inode == DISK_SECTOR_SIZE);
+    /* If this assertion fails, the inode structure is not exactly
+     * one sector in size, and you should fix that. */
+    ASSERT(sizeof *disk_inode == DISK_SECTOR_SIZE);
 
-//     disk_inode = calloc(1, sizeof *disk_inode);
-//     if (disk_inode != NULL) {
-//         size_t sectors = bytes_to_sectors(length);
-//         disk_inode->length = length;
-//         disk_inode->magic = INODE_MAGIC;
-//         disk_inode->is_dir = is_dir;
+    disk_inode = calloc(1, sizeof *disk_inode);
+    if (disk_inode != NULL) {
+        size_t sectors = bytes_to_sectors(length);
+        disk_inode->length = length;
+        disk_inode->magic = INODE_MAGIC;
+        disk_inode->is_dir = is_dir;
 
-//         if (free_map_allocate(sectors, &disk_inode->start)) {
-//             disk_write(filesys_disk, sector, disk_inode);
-//             if (sectors > 0) {
-//                 static char zeros[DISK_SECTOR_SIZE];
-//                 size_t i;
+        if (free_map_allocate(sectors, &disk_inode->start)) {
+            disk_write(filesys_disk, sector, disk_inode);
+            if (sectors > 0) {
+                static char zeros[DISK_SECTOR_SIZE];
+                size_t i;
 
-//                 for (i = 0; i < sectors; i++)
-//                     disk_write(filesys_disk, disk_inode->start + i, zeros);
-//             }
-//             success = true;
-//         }
-//         free(disk_inode);
-//     }
-//     return success;
-// }
+                for (i = 0; i < sectors; i++)
+                    disk_write(filesys_disk, disk_inode->start + i, zeros);
+            }
+            success = true;
+        }
+        free(disk_inode);
+    }
+    return success;
+}
+#endif
 
 /* Reads an inode from SECTOR
  * and returns a `struct inode' that contains it.
@@ -178,6 +180,7 @@ struct inode *inode_open(disk_sector_t sector) {
     inode->deny_write_cnt = 0;
     inode->removed = false;
     disk_read(filesys_disk, inode->sector, &inode->data);
+
     return inode;
 }
 
