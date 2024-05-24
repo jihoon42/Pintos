@@ -5,6 +5,7 @@
 #include <round.h>
 #include <string.h>
 
+#include "filesys/fat.h"
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
@@ -62,36 +63,47 @@ void inode_init(void) {
     list_init(&open_inodes);
 }
 
-/* Initializes an inode with LENGTH bytes of data and
- * writes the new inode to sector SECTOR on the file system
- * disk.
+/** #Project 4: Subdirectories - Initializes an inode with LENGTH bytes of data and writes
+ * the new inode to sector SECTOR on the file system disk.
  * Returns true if successful.
  * Returns false if memory or disk allocation fails. */
 bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
     struct inode_disk *disk_inode = NULL;
+    cluster_t start_clst;
     bool success = false;
 
     ASSERT(length >= 0);
-
-    /* If this assertion fails, the inode structure is not exactly
-     * one sector in size, and you should fix that. */
     ASSERT(sizeof *disk_inode == DISK_SECTOR_SIZE);
 
+    /* create disk_node and initialize*/
     disk_inode = calloc(1, sizeof *disk_inode);
     if (disk_inode != NULL) {
         size_t sectors = bytes_to_sectors(length);
+
         disk_inode->length = length;
         disk_inode->magic = INODE_MAGIC;
-        disk_inode->is_dir = is_dir;
+        disk_inode->is_dir = is_dir;  // File or directory
 
-        if (free_map_allocate(sectors, &disk_inode->start)) {
+        /* data cluster allocation */
+        if (start_clst = fat_create_chain(0)) {
+            disk_inode->start = cluster_to_sector(start_clst);
+            /* write disk_inode on disk */
             disk_write(filesys_disk, sector, disk_inode);
+
             if (sectors > 0) {
                 static char zeros[DISK_SECTOR_SIZE];
+                cluster_t target = start_clst;
+                disk_sector_t w_sector;
                 size_t i;
 
-                for (i = 0; i < sectors; i++)
-                    disk_write(filesys_disk, disk_inode->start + i, zeros);
+                /* make cluster chain based length and initialize zero*/
+                while (sectors > 0) {
+                    w_sector = cluster_to_sector(target);
+                    disk_write(filesys_disk, w_sector, zeros);
+
+                    target = fat_create_chain(target);
+                    sectors--;
+                }
             }
             success = true;
         }
@@ -99,6 +111,44 @@ bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
     }
     return success;
 }
+
+/* Initializes an inode with LENGTH bytes of data and
+ * writes the new inode to sector SECTOR on the file system
+ * disk.
+ * Returns true if successful.
+ * Returns false if memory or disk allocation fails. */
+// bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {    
+//     struct inode_disk *disk_inode = NULL;
+//     bool success = false;
+
+//     ASSERT(length >= 0);
+
+//     /* If this assertion fails, the inode structure is not exactly
+//      * one sector in size, and you should fix that. */
+//     ASSERT(sizeof *disk_inode == DISK_SECTOR_SIZE);
+
+//     disk_inode = calloc(1, sizeof *disk_inode);
+//     if (disk_inode != NULL) {
+//         size_t sectors = bytes_to_sectors(length);
+//         disk_inode->length = length;
+//         disk_inode->magic = INODE_MAGIC;
+//         disk_inode->is_dir = is_dir;
+
+//         if (free_map_allocate(sectors, &disk_inode->start)) {
+//             disk_write(filesys_disk, sector, disk_inode);
+//             if (sectors > 0) {
+//                 static char zeros[DISK_SECTOR_SIZE];
+//                 size_t i;
+
+//                 for (i = 0; i < sectors; i++)
+//                     disk_write(filesys_disk, disk_inode->start + i, zeros);
+//             }
+//             success = true;
+//         }
+//         free(disk_inode);
+//     }
+//     return success;
+// }
 
 /* Reads an inode from SECTOR
  * and returns a `struct inode' that contains it.
@@ -308,11 +358,11 @@ bool inode_is_dir(const struct inode *inode) {
 }
 
 /** #Project 4: Subdirectories - Returns the removed, in bool, of INODE */
-bool inode_is_removed(const struct inode *inode){
+bool inode_is_removed(const struct inode *inode) {
     return inode->removed;
 }
 
 /** #Project 4: Subdirectories - Returns the sector, in bytes, of INODE */
-disk_sector_t inode_sector(struct inode *inode){
-	return inode->sector;
+disk_sector_t inode_sector(struct inode *inode) {
+    return inode->sector;
 }

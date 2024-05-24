@@ -35,6 +35,7 @@ void filesys_init(bool format) {
         do_format();
 
     fat_open();
+    thread_current()->cwd = dir_open_root(); /** #Project 4: Subdirectories - 현재 thread의 cwd를 root로 설정 */
 #else
     /* Original FS */
     free_map_init();
