@@ -83,7 +83,7 @@ bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
         disk_inode->length = length;
         disk_inode->magic = INODE_MAGIC;
         disk_inode->is_dir = is_dir;
-        
+
         if (free_map_allocate(sectors, &disk_inode->start)) {
             disk_write(filesys_disk, sector, disk_inode);
             if (sectors > 0) {
@@ -305,4 +305,14 @@ off_t inode_length(const struct inode *inode) {
 /** #Project 4: Subdirectories - Returns the is_dir, in bool, of INODE's data. */
 bool inode_is_dir(const struct inode *inode) {
     return inode->data.is_dir;
+}
+
+/** #Project 4: Subdirectories - Returns the removed, in bool, of INODE */
+bool inode_is_removed(const struct inode *inode){
+    return inode->removed;
+}
+
+/** #Project 4: Subdirectories - Returns the sector, in bytes, of INODE */
+disk_sector_t inode_sector(struct inode *inode){
+	return inode->sector;
 }
