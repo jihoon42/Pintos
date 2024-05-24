@@ -455,7 +455,7 @@ bool readdir(int fd, char name[READDIR_MAX_LEN + 1]) {
 bool isdir(int fd) {
     struct file *file = process_get_file(fd);
 
-    return inode_is_directory(file->inode);
+    return inode_is_dir(file->inode);
 }
 
 /** #Project 4: Subdirectories - Returns the inode number of the inode associated with fd, which may represent an ordinary file or a directory. */

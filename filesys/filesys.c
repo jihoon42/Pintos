@@ -6,9 +6,13 @@
 
 #include "devices/disk.h"
 #include "filesys/directory.h"
+#include "filesys/fat.h"
 #include "filesys/file.h"
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
+
+/** #Project 4: Subdirectories and Soft Links */
+#include "threads/thread.h"
 
 /* The disk that contains the file system. */
 struct disk *filesys_disk;
@@ -60,7 +64,7 @@ void filesys_done(void) {
 bool filesys_create(const char *name, off_t initial_size) {
     disk_sector_t inode_sector = 0;
     struct dir *dir = dir_open_root();
-    bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size) && dir_add(dir, name, inode_sector));
+    bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size, FILE_TYPE) && dir_add(dir, name, inode_sector));
     if (!success && inode_sector != 0)
         free_map_release(inode_sector, 1);
     dir_close(dir);
@@ -112,4 +116,99 @@ static void do_format(void) {
 #endif
 
     printf("done.\n");
+}
+
+struct dir *parse_path(const char *path_name, char *file_name) {
+    struct dir *dir = dir_open_root();
+    char *token, *next_token, *ptr;
+    char *path = malloc(strlen(path_name) + 1);
+    strlcpy(path, path_name, strlen(path_name) + 1);
+
+    if (path[0] != '/') {
+        dir_close(dir);
+        dir = dir_reopen(thread_current()->cwd);
+    }
+
+    token = strtok_r(path, "/", &ptr);
+    next_token = strtok_r(NULL, "/", &ptr);
+
+    if (!token)  // path_name = "/" 만 입력되었을 때
+        return dir_open_root();
+
+    while (!next_token) {
+        struct inode *inode = NULL;
+        if (!dir_lookup(dir, token, &inode))
+            goto err;
+
+        if (!inode_is_dir(inode))
+            goto err;
+
+        dir_close(dir);
+        dir = dir_open(inode);
+    }
+
+    if (!token)
+        goto err;
+
+    struct inode *inode = NULL;
+
+    dir_lookup(dir, token, &inode);
+
+    if (inode_is_dir(inode)) {  // 마지막이 디렉토리인 경우
+        dir_close(dir);
+        dir = dir_open(inode);
+    } else  // 마지막이 파일인 경우
+        strlcpy(file_name, token, strlen(token) + 1);
+
+    free(path);
+    return dir;
+err:
+    dir_close(dir);
+    return NULL;
+}
+
+bool filesys_chdir(const char *dir_name) {
+    char file_name[128];
+    file_name[0] = '\0';
+    struct dir *dir = parse_path(dir_name, file_name);
+
+    if (file_name[0] != '\0') {
+        dir_close(dir);
+        return false;
+    }
+
+    thread_current()->cwd = dir;
+
+    return true;
+}
+
+bool filesys_mkdir(const char *dir_name) {
+    cluster_t inode_cluster = fat_create_chain(0);
+    disk_sector_t inode_sector = cluster_to_sector(inode_cluster);
+    char file_name[128];
+
+    struct dir *dir_path = parse_path(dir_name, file_name);
+    if (dir_path == NULL)
+        return false;
+
+    struct dir *dir = dir_reopen(dir_path);
+
+    /* 할당 받은 cluster에 inode를 만들고 directory에 file 추가 */
+    bool success = (dir != NULL && inode_create(inode_sector, 0, DIR_TYPE) && dir_add(dir, file_name, inode_sector));
+
+    if (!success && inode_cluster != 0)
+        fat_remove_chain(inode_cluster, 0);
+
+    /* directory에 .과 .. 추가 */
+    if (success) {
+        struct inode *inode = NULL;
+        dir_lookup(dir, file_name, &inode);
+        struct dir *new_dir = dir_open(inode);
+        dir_add(new_dir, ".", inode_sector);
+        dir_add(new_dir, "..", inode_get_inumber(dir_get_inode(dir)));
+        dir_close(new_dir);
+    }
+
+    dir_close(dir);
+    return success;
 }

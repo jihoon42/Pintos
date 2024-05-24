@@ -8,6 +8,10 @@
 #define FREE_MAP_SECTOR 0       /* Free map file inode sector. */
 #define ROOT_DIR_SECTOR 1       /* Root directory file inode sector. */
 
+/** #Project 4: Subdirectories - define types */
+#define FILE_TYPE 0
+#define DIR_TYPE  1
+
 /* Disk used for file system. */
 extern struct disk *filesys_disk;
 
