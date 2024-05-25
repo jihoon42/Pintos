@@ -63,7 +63,7 @@ void inode_init(void) {
     list_init(&open_inodes);
 }
 
-#ifdef FILESYS
+#ifdef EFILESYS
 /** #Project 4: Subdirectories - Initializes an inode with LENGTH bytes of data and writes
  * the new inode to sector SECTOR on the file system disk.
  * Returns true if successful.
@@ -118,7 +118,7 @@ bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
  * disk.
  * Returns true if successful.
  * Returns false if memory or disk allocation fails. */
-bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {    
+bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
     struct inode_disk *disk_inode = NULL;
     bool success = false;
 
@@ -133,7 +133,6 @@ bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
         size_t sectors = bytes_to_sectors(length);
         disk_inode->length = length;
         disk_inode->magic = INODE_MAGIC;
-        disk_inode->is_dir = is_dir;
 
         if (free_map_allocate(sectors, &disk_inode->start)) {
             disk_write(filesys_disk, sector, disk_inode);
@@ -283,6 +282,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
     const uint8_t *buffer = buffer_;
     off_t bytes_written = 0;
     uint8_t *bounce = NULL;
+    off_t origin_offset = offset;
 
     if (inode->deny_write_cnt)
         return 0;
@@ -330,6 +330,10 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         bytes_written += chunk_size;
     }
     free(bounce);
+
+    /** #Project 4: File Growth - 
+    if (inode_length(inode) < origin_offset + bytes_written)
+        inode->data.length = origin_offset + bytes_written;
 
     return bytes_written;
 }

@@ -120,6 +120,7 @@ void syscall_handler(struct intr_frame *f UNUSED) {
             munmap(f->R.rdi);
             break;
 #endif
+#ifdef EFILESYS
         case SYS_ISDIR:
             f->R.rax = isdir(f->R.rdi);
             break;
@@ -138,6 +139,7 @@ void syscall_handler(struct intr_frame *f UNUSED) {
         case SYS_SYMLINK:
             f->R.rax = symlink(f->R.rdi, f->R.rsi);
             break;
+#endif
         default:
             exit(-1);
     }
@@ -429,6 +431,7 @@ void munmap(void *addr) {
 }
 #endif
 
+#ifdef EFILESYS
 /** #Project 4: Subdirectories - Changes the current working directory of the process to dir, which may be relative or absolute. */
 bool chdir(const char *dir) {
     return filesys_chdir(dir);
@@ -467,5 +470,6 @@ int inumber(int fd) {
 
 /** #Project 4: Soft Links - Creates a symbolic link named linkpath which contains the string target. */
 int symlink(const char *target, const char *linkpath) {
-    return -1; // false
+    return -1;  // false
 }
+#endif

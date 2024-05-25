@@ -62,7 +62,7 @@ void filesys_done(void) {
  * Returns true if successful, false otherwise.
  * Fails if a file named NAME already exists,
  * or if internal memory allocation fails. */
-#ifndef FILESYS
+#ifndef EFILESYS
 bool filesys_create(const char *name, off_t initial_size) {
     disk_sector_t inode_sector = 0;
     struct dir *dir = dir_open_root();
@@ -244,7 +244,7 @@ static void do_format(void) {
 }
 
 /** #Project 4: Subdirectories */
-#ifdef FILESYS
+#ifdef EFILESYS
 struct dir *parse_path(const char *path_name, char *file_name) {
     struct dir *dir = dir_open_root();
     char *token, *next_token, *ptr;
