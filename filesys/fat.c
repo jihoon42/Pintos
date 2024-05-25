@@ -150,7 +150,7 @@ void fat_boot_create(void) {
 void fat_fs_init(void) {
     /* TODO: Your code goes here. */
     fat_fs->data_start = fat_fs->bs.fat_sectors + fat_fs->bs.fat_start;
-    fat_fs->fat_length = disk_size(filesys_disk) - 1 - fat_fs->bs.fat_sectors;
+    fat_fs->fat_length = disk_size(filesys_disk) - fat_fs->bs.fat_sectors - 1;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -158,7 +158,7 @@ void fat_fs_init(void) {
 /*----------------------------------------------------------------------------*/
 /** Project 4: Indexed and Extensible Files */
 cluster_t get_empty_cluster(void) {
-    cluster_t clst = fat_fs->bs.root_dir_cluster + 2;
+    cluster_t clst = fat_fs->bs.root_dir_cluster + 1;
     cluster_t fat_length = fat_fs->fat_length;
 
     for (clst; clst < fat_length; clst++) {
@@ -179,7 +179,7 @@ cluster_t fat_create_chain(cluster_t clst) {
 
     cluster_t empty_clst = get_empty_cluster();
 
-    if (!empty_clst)  // 빈 clst가 없을 때
+    if (!empty_clst)  // empty cluster가 없을 때
         return 0;
 
     fat_put(empty_clst, EOChain);
@@ -210,7 +210,7 @@ void fat_remove_chain(cluster_t clst, cluster_t pclst) {
         target = next;
     }
 
-    if (!pclst)  // pcluster가 입력됬으면 pcluster를 chain으로 끝으로 만듬 */
+    if (!pclst)  // pcluster 입력 -> pcluster를 chain으로 끝으로 만듬 */
         fat_put(pclst, EOChain);
 }
 

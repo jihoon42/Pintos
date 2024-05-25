@@ -11,7 +11,7 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 
-/** #Project 4: Subdirectories and Soft Links */
+/** #Project 4: File System */
 #include "threads/thread.h"
 
 /* The disk that contains the file system. */
@@ -35,7 +35,7 @@ void filesys_init(bool format) {
         do_format();
 
     fat_open();
-    thread_current()->cwd = dir_open_root(); /** #Project 4: Subdirectories - 현재 thread의 cwd를 root로 설정 */
+    thread_current()->cwd = dir_open_root(); /** #Project 4: File System - 현재 thread의 cwd를 root로 설정 */
 #else
     /* Original FS */
     free_map_init();
@@ -102,7 +102,7 @@ bool filesys_remove(const char *name) {
     return success;
 }
 #else
-/** #Project 4: Subdirectories - Creates a file named NAME with the given INITIAL_SIZE.
+/** #Project 4: File System - Creates a file named NAME with the given INITIAL_SIZE.
  * Returns true if successful, false otherwise.
  * Fails if a file named NAME already exists, or if internal memory allocation fails. */
 bool filesys_create(const char *name, off_t initial_size) {
@@ -132,7 +132,7 @@ bool filesys_create(const char *name, off_t initial_size) {
     return success;
 }
 
-/** #Project 4: Subdirectories - Opens the file with the given NAME.
+/** #Project 4: File System - Opens the file with the given NAME.
  * Returns the new file if successful or a null pointer otherwise.
  * Fails if no file named NAME exists, or if an internal memory allocation fails. */
 struct file *filesys_open(const char *name) {
@@ -172,7 +172,7 @@ struct file *filesys_open(const char *name) {
     return file_open(inode);
 }
 
-/** #Project 4: Subdirectories - Deletes the file named NAME.
+/** #Project 4: File System - Deletes the file named NAME.
  * Returns true if successful, false on failure.
  * Fails if no file named NAME exists, or if an internal memory allocation fails. */
 bool filesys_remove(const char *name) {
@@ -243,7 +243,7 @@ static void do_format(void) {
     printf("done.\n");
 }
 
-/** #Project 4: Subdirectories */
+/** #Project 4: File System */
 #ifdef EFILESYS
 struct dir *parse_path(const char *path_name, char *file_name) {
     struct dir *dir = dir_open_root();

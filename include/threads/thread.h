@@ -148,7 +148,7 @@ typedef struct thread {
     void *stack_pointer;
 #endif
 
-    /** Project 4: Filesys - Subdirectories and Soft Links */
+    /** Project 4: Filesys - File System */
     struct dir *cwd; // Current Working Directory
 
     /* Owned by thread.c. */

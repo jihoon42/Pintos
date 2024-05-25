@@ -20,7 +20,7 @@
 #include "userprog/process.h"
 /** -----------------------  */
 
-/** #Project 4: Subdirectories and Soft Links */
+/** #Project 4: File System */
 #include "filesys/directory.h"
 #include "filesys/inode.h"
 
@@ -432,17 +432,17 @@ void munmap(void *addr) {
 #endif
 
 #ifdef EFILESYS
-/** #Project 4: Subdirectories - Changes the current working directory of the process to dir, which may be relative or absolute. */
+/** #Project 4: File System - Changes the current working directory of the process to dir, which may be relative or absolute. */
 bool chdir(const char *dir) {
     return filesys_chdir(dir);
 }
 
-/** #Project 4: Subdirectories - Creates the directory named dir, which may be relative or absolute. */
+/** #Project 4: File System - Creates the directory named dir, which may be relative or absolute. */
 bool mkdir(const char *dir) {
     return filesys_mkdir(dir);
 }
 
-/** #Project 4: Subdirectories - Reads a directory entry from file descriptor fd, which must represent a directory. */
+/** #Project 4: File System - Reads a directory entry from file descriptor fd, which must represent a directory. */
 bool readdir(int fd, char name[READDIR_MAX_LEN + 1]) {
     struct file *file = process_get_file(fd);
 
@@ -454,14 +454,14 @@ bool readdir(int fd, char name[READDIR_MAX_LEN + 1]) {
     return dir_readdir(dir, name);
 }
 
-/** #Project 4: Subdirectories - Returns true if fd represents a directory, false if it represents an ordinary file. */
+/** #Project 4: File System - Returns true if fd represents a directory, false if it represents an ordinary file. */
 bool isdir(int fd) {
     struct file *file = process_get_file(fd);
 
     return inode_is_dir(file->inode);
 }
 
-/** #Project 4: Subdirectories - Returns the inode number of the inode associated with fd, which may represent an ordinary file or a directory. */
+/** #Project 4: File System - Returns the inode number of the inode associated with fd, which may represent an ordinary file or a directory. */
 int inumber(int fd) {
     struct file *file = process_get_file(fd);
 

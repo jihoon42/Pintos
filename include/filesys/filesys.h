@@ -9,7 +9,7 @@
 #define FREE_MAP_SECTOR 0 /* Free map file inode sector. */
 #define ROOT_DIR_SECTOR 1 /* Root directory file inode sector. */
 
-/** #Project 4: Subdirectories - define types */
+/** #Project 4: File System - define types */
 #define FILE_TYPE 0
 #define DIR_TYPE  1
 
@@ -23,7 +23,7 @@ struct file *filesys_open(const char *name);
 bool filesys_remove(const char *name);
 
 #ifdef FILESYS
-/** #Project 4: Subdirectories */
+/** #Project 4: File System */
 struct dir *parse_path(const char *path_name, char *file_name);
 bool filesys_chdir(const char *dir_name);
 bool filesys_mkdir(const char *dir_name);

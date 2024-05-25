@@ -202,7 +202,7 @@ bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1]) {
     return false;
 }
 
-/** #Project 4: Subdirectories - Opens and returns the finding directory. */
+/** #Project 4: File System - Opens and returns the finding directory. */
 bool dir_finddir(struct dir *dir, struct dir *child_dir, char name[NAME_MAX + 1]) {
     struct dir_entry e;
 
@@ -218,7 +218,7 @@ bool dir_finddir(struct dir *dir, struct dir *child_dir, char name[NAME_MAX + 1]
     return false;
 }
 
-/** #Project 4: Subdirectories - Return TRUE if dir is empty */
+/** #Project 4: File System - Return TRUE if dir is empty */
 bool dir_is_empty(struct dir *dir) {
     char name_in_dir[15];
     int count = 0;
