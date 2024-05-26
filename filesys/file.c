@@ -17,7 +17,7 @@ struct file *file_open(struct inode *inode) {
 
         /** #Project 2: Extend File Descriptor - dup_count 초기화 */
         file->dup_count = 0;
-        
+
         return file;
     } else {
         inode_close(inode);
@@ -86,6 +86,9 @@ off_t file_read_at(struct file *file, void *buffer, off_t size, off_t file_ofs) 
  * not yet implemented.)
  * Advances FILE's position by the number of bytes read. */
 off_t file_write(struct file *file, const void *buffer, off_t size) {
+    if (inode_is_dir(file->inode)) /** Project 4: File System - 디렉토리 write 금지 */
+        return -1;
+
     off_t bytes_written = inode_write_at(file->inode, buffer, size, file->pos);
     file->pos += bytes_written;
     return bytes_written;
