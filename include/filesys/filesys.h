@@ -10,10 +10,8 @@
 #define ROOT_DIR_SECTOR 1 /* Root directory file inode sector. */
 
 /** #Project 4: File System - define types */
-#define FILE_TYPE  0
-#define DIR_TYPE   1
-#define LINK_TYPE  2
-#define DUMMY_TYPE 3
+#define FILE_TYPE 0
+#define DIR_TYPE  1
 
 /* Disk used for file system. */
 extern struct disk *filesys_disk;
@@ -29,8 +27,6 @@ bool filesys_remove(const char *name);
 struct dir *parse_path(char *, char *);
 bool filesys_chdir(const char *dir_name);
 bool filesys_mkdir(const char *dir_name);
-bool filesys_symlink(const char *target, const char *linkpath);
-struct inode *filesys_dummy_create(const char *name);
 #endif
 
 #endif /* filesys/filesys.h */

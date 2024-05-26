@@ -19,7 +19,7 @@ struct dir {
 struct dir_entry {
     disk_sector_t inode_sector; /* Sector number of header. */
     char name[NAME_MAX + 1];    /* Null terminated file name. */
-    int8_t in_use;              /** #Project 4: File System - In use or free? bool -> int8 변환 */
+    bool in_use;                /* In use or free? */
 };
 
 /* Creates a directory with space for ENTRY_CNT entries in the
@@ -111,7 +111,7 @@ bool dir_lookup(const struct dir *dir, const char *name, struct inode **inode) {
 
     return *inode != NULL;
 }
-
+#endif
 /* Adds a file named NAME to DIR, which must not already contain a
  * file by that name.  The file's inode is in sector
  * INODE_SECTOR.
@@ -146,11 +146,7 @@ bool dir_add(struct dir *dir, const char *name, disk_sector_t inode_sector) {
             break;
 
     /* Write slot. */
-    if (inode_get_type(dir->inode) == 3)
-        e.in_use = false;
-    else
-        e.in_use = true;
-
+    e.in_use = true;
     strlcpy(e.name, name, sizeof e.name);
     e.inode_sector = inode_sector;
     success = inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
@@ -159,6 +155,7 @@ done:
     return success;
 }
 
+#ifndef EFILESYS
 /* Removes any entry for NAME in DIR.
  * Returns true if successful, false on failure,
  * which occurs only if there is no file with the given NAME. */
@@ -234,53 +231,6 @@ bool dir_lookup(const struct dir *dir, const char *name, struct inode **inode) {
         *inode = NULL;
 
     return *inode != NULL;
-}
-
-/** #Project 4: File System - Adds a file named NAME to DIR, which must not already contain a
- * file by that name.  The file's inode is in sector
- * INODE_SECTOR.
- * Returns true if successful, false on failure.
- * Fails if NAME is invalid (i.e. too long) or a disk or memory
- * error occurs. */
-bool dir_add(struct dir *dir, const char *name, disk_sector_t inode_sector) {
-    struct dir_entry e;
-    off_t ofs;
-    bool success = false;
-
-    ASSERT(dir != NULL);
-    ASSERT(name != NULL);
-
-    /* Check NAME for validity. */
-    if (*name == '\0' || strlen(name) > NAME_MAX)
-        return false;
-
-    /* Set OFS to offset of free slot.
-     * If there are no free slots, then it will be set to the
-     * current end-of-file.
-
-     * inode_read_at() will only return a short read at end of file.
-     * Otherwise, we'd need to verify that we didn't get a short
-     * read due to something intermittent such as low memory. */
-    for (ofs = 0; inode_read_at(dir->inode, &e, sizeof e, ofs) == sizeof e; ofs += sizeof e) {
-        if (e.in_use == 2 && !strcmp(e.name, name)) {
-            e.in_use = 1;
-            fat_remove_chain(sector_to_cluster(inode_sector), 1);
-            success = inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
-
-            goto done;
-        }
-        if (!e.in_use)
-            break;
-    }
-
-    /* Write slot. */
-    e.in_use = true;
-    strlcpy(e.name, name, sizeof e.name);
-    e.inode_sector = inode_sector;
-    success = inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
-
-done:
-    return success;
 }
 
 /** #Project 4: File System - Removes any entry for NAME in DIR.
@@ -363,32 +313,11 @@ bool dir_is_empty(struct dir *dir) {
     char name_in_dir[15];
     int count = 0;
 
-    while (dir_readdir(dir, name_in_dir))
+     while (dir_readdir(dir, name_in_dir))
         count++;
 
     if (count == 0)
         return true;
 
     return false;
-}
-
-bool dummy_add(struct dir *dir, const char *name, disk_sector_t inode_sector) {
-    struct dir_entry e;
-    off_t ofs;
-    bool success = false;
-
-    if (*name == '\0' || strlen(name) > NAME_MAX || lookup(dir, name, NULL, NULL))
-        goto done;
-
-    for (ofs = 0; inode_read_at(dir->inode, &e, sizeof e, ofs) == sizeof e; ofs += sizeof e)
-        if (!e.in_use)
-            break;
-
-    e.in_use = 2;
-    strlcpy(e.name, name, sizeof e.name);
-    e.inode_sector = inode_sector;
-    success = inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
-
-done:
-    return success;
 }
