@@ -337,6 +337,7 @@ static disk_sector_t byte_to_sector(const struct inode *inode, off_t pos) {
  * Returns false if memory or disk allocation fails. */
 bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
     struct inode_disk *disk_inode = NULL;
+    cluster_t start_clst;
     bool success = false;
 
     ASSERT(length >= 0);
@@ -345,34 +346,40 @@ bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
     /* create disk_node and initialize*/
     disk_inode = calloc(1, sizeof *disk_inode);
     if (disk_inode != NULL) {
-        cluster_t start_clst = fat_create_chain(0);
         size_t sectors = bytes_to_sectors(length);
 
         disk_inode->length = length;
         disk_inode->magic = INODE_MAGIC;
-        disk_inode->is_dir = is_dir;  // File or directory
-        disk_inode->start = cluster_to_sector(start_clst);
+        disk_inode->is_dir = is_dir;
 
-        /* write disk_inode on disk */
-        disk_write(filesys_disk, sector, disk_inode);
+        /* data cluster allocation */
+        if (start_clst = fat_create_chain(0)) {
+            disk_inode->start = cluster_to_sector(start_clst);
+            /* write disk_inode on disk */
+            disk_write(filesys_disk, sector, disk_inode);
 
-        if (sectors > 0) {
-            static char zeros[DISK_SECTOR_SIZE];
-            cluster_t target = start_clst;
-            disk_sector_t w_sector;
+            if (sectors > 0) {
+                static char zeros[DISK_SECTOR_SIZE];
+                cluster_t target = start_clst;
+                disk_sector_t w_sector;
+                size_t i;
 
-            /* make cluster chain based length and initialize zero*/
-            while (sectors > 0) {
-                w_sector = cluster_to_sector(target);
-                disk_write(filesys_disk, w_sector, zeros);
+                /* make cluster chain based length and initialize zero*/
+                while (sectors > 0) {
+                    w_sector = cluster_to_sector(target);
+                    disk_write(filesys_disk, w_sector, zeros);
 
-                target = fat_create_chain(target);
-                sectors--;
+                    target = fat_create_chain(target);
+                    sectors--;
+                }
             }
+
+            success = true;
         }
-        success = true;
+
+        free(disk_inode);
     }
-    free(disk_inode);
+
     return success;
 }
 
