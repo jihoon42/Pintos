@@ -73,22 +73,32 @@ bool filesys_create(const char *name, off_t initial_size) {
 
     cluster_t inode_cluster = fat_create_chain(0);
     disk_sector_t inode_sector = cluster_to_sector(inode_cluster);
+    bool success;
 
-    // char file_name[128];
-    // file_name[0] = '\0';
+    char file_name[128];
+    file_name[0] = '\0';
 
-    // struct dir *dir_path = parse_path(name, file_name);
+    struct dir *dir_path = parse_path(name, file_name);
 
-    // if (!strcmp(file_name, "") || !dir_path)
-    //     return false;
+    if (strcmp(file_name, "") == 0)
+        success = false;
 
-    struct dir *dir = dir_open_root();
-    // struct dir *dir = dir_reopen(dir_path);
+    if (dir_path == NULL)
+        return false;
 
-    // if (inode_is_removed(dir_get_inode(thread_current()->cwd)))
-    //     return false;
+    // printf("===[DEBUG] name : %s\n", name);
+    // printf("===[DEBUG] file_name : %s\n", file_name);
 
-    bool success = (dir != NULL && inode_create(inode_sector, initial_size, FILE_TYPE) && dir_add(dir, name, inode_sector));
+    // printf("===Start of listing.===\n");
+    // char name_in_dir[15];
+    // while (dir_readdir(dir_path, name_in_dir))
+    //     printf("%s\n", name_in_dir);
+    // printf("===End of listing.===\n");
+
+    // struct dir *dir = dir_open_root();
+    struct dir *dir = dir_reopen(dir_path);
+
+    success = (dir != NULL && inode_create(inode_sector, initial_size, FILE_TYPE) && dir_add(dir, file_name, inode_sector));
 
     if (!success && inode_sector != 0)
         fat_remove_chain(inode_cluster, 1);
@@ -104,17 +114,24 @@ bool filesys_create(const char *name, off_t initial_size) {
  * Fails if no file named NAME exists,
  * or if an internal memory allocation fails. */
 struct file *filesys_open(const char *name) {
+    // struct dir *dir = dir_open_root();
+    // struct inode *inode = NULL;
+
+    // if (dir != NULL)
+    //     dir_lookup(dir, name, &inode);
+    // dir_close(dir);
+
+    // return file_open(inode);
+
+    if (strlen(name) == 1 && name[0] == '/')
+        return file_open(dir_get_inode(dir_open_root()));
+
     struct dir *dir = dir_open_root();
     struct inode *inode = NULL;
 
     if (dir != NULL)
         dir_lookup(dir, name, &inode);
     dir_close(dir);
-
-    return file_open(inode);
-
-    // if (strlen(name) == 1 && name[0] == '/')
-    //     return file_open(dir_get_inode(dir_open_root()));
 
     // char file_name[128];
     // file_name[0] = '\0';
@@ -143,7 +160,7 @@ struct file *filesys_open(const char *name) {
     // if (inode == NULL || inode_is_removed(inode))
     //     return NULL;
 
-    // return file_open(inode);
+    return file_open(inode);
 }
 
 /* Deletes the file named NAME.
@@ -227,12 +244,7 @@ struct dir *parse_path(char *path_name, char *file_name) {
     char *token, *next_token, *ptr;
     char *path = malloc(strlen(path_name) + 1);
     strlcpy(path, path_name, strlen(path_name) + 1);
-
-    if (path[0] != '/') {
-        dir_close(dir);
-        dir = dir_reopen(thread_current()->cwd);
-    }
-
+    
     token = strtok_r(path, "/", &ptr);
     next_token = strtok_r(NULL, "/", &ptr);
 
