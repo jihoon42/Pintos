@@ -400,7 +400,7 @@ void inode_close(struct inode *inode) {
         if (inode->removed)
             fat_remove_chain(inode->sector, 0);
 
-        disk_write(filesys_disk, inode->sector, &inode->data);  // file close 시 변경사항 저장
+        disk_write(filesys_disk, inode->sector, &inode->data);  // inode close 시 disk에 저장
 
         free(inode);
     }

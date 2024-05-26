@@ -181,17 +181,19 @@ bool filesys_remove(const char *name) {
 
         dir_finddir(dir, dir_path, target);
         dir_close(dir);
-
+        
         return dir_remove(dir_path, target);
     }
 
-    struct dir *dir = dir_reopen(dir_path);  // 대상이 파일인 경우
-    success = dir != NULL && dir_remove(dir, target);
+    struct dir *file = dir_reopen(dir_path);  // 대상이 파일인 경우
+    success = file != NULL && dir_remove(file, target);
 
     if (dir_lookup(dir_path, target, &inode))
         return false;
+
+    file_close(file);
 done:
-    dir_close(dir);
+    dir_close(dir_path);
     return success;
 #endif
 }
@@ -231,9 +233,6 @@ struct dir *parse_path(char *path_name, char *target) {
     char *token, *next_token, *ptr;
     char *path = malloc(strlen(path_name) + 1);
     strlcpy(path, path_name, strlen(path_name) + 1);
-
-    // if (path[0] == '/')
-    //     token = strtok_r(path, "/", &ptr);
 
     if (path[0] != '/' && thread_current()->cwd != NULL) {
         dir_close(dir);
@@ -285,7 +284,7 @@ bool filesys_chdir(const char *dir_name) {
     if (!inode_is_dir(inode) || inode_is_removed(inode))
         return false;
 
-    dir = file_open(inode);
+    dir = dir_open(inode);
 
     thread_current()->cwd = dir;
 
@@ -321,7 +320,11 @@ bool filesys_mkdir(const char *dir_name) {
             success = false;
         if (!dir_add(new_dir, "..", inode_get_inumber(dir_get_inode(dir))))
             success = false;
+
+        dir_close(new_dir);
     }
+
+    dir_close(dir);
 
     return success;
 }
