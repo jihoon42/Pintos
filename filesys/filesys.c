@@ -83,19 +83,10 @@ bool filesys_create(const char *name, off_t initial_size) {
     struct dir *dir_path = parse_path(name, file_name);
 
     if (strcmp(file_name, "") == 0)
-        success = false;
+        return false;
 
     if (dir_path == NULL)
         return false;
-
-    // printf("===[DEBUG] name : %s\n", name);
-    // printf("===[DEBUG] file_name : %s\n", file_name);
-
-    // printf("===Start of listing.===\n");
-    // char name_in_dir[15];
-    // while (dir_readdir(dir_path, name_in_dir))
-    //     printf("%s\n", name_in_dir);
-    // printf("===End of listing.===\n");
 
     // struct dir *dir = dir_open_root();
     struct dir *dir = dir_reopen(dir_path);
@@ -128,6 +119,9 @@ struct file *filesys_open(const char *name) {
 
     return file_open(inode);
 #else
+    if (strlen(name) == 0)
+        return NULL;
+
     if (strlen(name) == 1 && name[0] == '/')
         return file_open(dir_get_inode(dir_open_root()));
 
@@ -175,6 +169,9 @@ bool filesys_remove(const char *name) {
 
     return success;
 #else
+    if (strlen(name) == 1 && name[0] == '/') /** Project 4: File System - root 디렉토리 remove 금지 */
+        return false;
+
     char file_name[128];
     file_name[0] = '\0';
     bool success = false;
@@ -274,21 +271,23 @@ struct dir *parse_path(char *path_name, char *file_name) {
     struct inode *inode = NULL;
 
     dir_lookup(dir, token, &inode);
-
     if (inode == NULL || inode_is_removed(inode)) {
         strlcpy(file_name, token, strlen(token) + 1);
-        return dir;
+        goto copy;
     }
-
     if (inode_is_dir(inode)) {  // 마지막이 디렉토리인 경우
         dir_close(dir);
         dir = dir_open(inode);
-    } else  // 마지막이 파일인 경우
-        strlcpy(file_name, token, strlen(token) + 1);
+        goto done;
+    }
 
+copy:  // 마지막이 파일인 경우 or 초기화 되지 않은 경우 or 삭제된 경우
+    strlcpy(file_name, token, strlen(token) + 1);
+done:
     free(path);
     return dir;
 err:
+    free(path);
     dir_close(dir);
     return NULL;
 }
@@ -313,13 +312,16 @@ bool filesys_mkdir(const char *dir_name) {
     disk_sector_t inode_sector = cluster_to_sector(inode_cluster);
     char file_name[128];
 
+    if (strlen(dir_name) == 0)
+        return false;
+
     struct dir *dir_path = parse_path(dir_name, file_name);
     if (dir_path == NULL)
         return false;
 
     struct dir *dir = dir_reopen(dir_path);
 
-    // 할당 받은 cluster에 inode를 만들고 directory에 file 추가
+    // 할당 받은 cluster에 inode를 만들고 directory 추가
     bool success = (dir != NULL && inode_create(inode_sector, 0, DIR_TYPE) && dir_add(dir, file_name, inode_sector));
 
     if (!success && inode_cluster != 0)
