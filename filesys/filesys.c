@@ -64,13 +64,15 @@ void filesys_done(void) {
  * Fails if a file named NAME already exists,
  * or if internal memory allocation fails. */
 bool filesys_create(const char *name, off_t initial_size) {
-    // disk_sector_t inode_sector = 0;
-    // struct dir *dir = dir_open_root();
-    // bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size, FILE_TYPE) && dir_add(dir, name, inode_sector));
-    // if (!success && inode_sector != 0)
-    //     free_map_release(inode_sector, 1);
-    // dir_close(dir);
-
+#ifndef EFILESYS
+    disk_sector_t inode_sector = 0;
+    struct dir *dir = dir_open_root();
+    bool success = (dir != NULL && free_map_allocate(1, &inode_sector) && inode_create(inode_sector, initial_size, FILE_TYPE) && dir_add(dir, name, inode_sector));
+    if (!success && inode_sector != 0)
+        free_map_release(inode_sector, 1);
+    dir_close(dir);
+    return success;
+#else
     cluster_t inode_cluster = fat_create_chain(0);
     disk_sector_t inode_sector = cluster_to_sector(inode_cluster);
     bool success;
@@ -98,6 +100,7 @@ bool filesys_create(const char *name, off_t initial_size) {
     // struct dir *dir = dir_open_root();
     struct dir *dir = dir_reopen(dir_path);
 
+    // success = (dir != NULL && inode_create(inode_sector, initial_size, FILE_TYPE) && dir_add(dir, name, inode_sector));
     success = (dir != NULL && inode_create(inode_sector, initial_size, FILE_TYPE) && dir_add(dir, file_name, inode_sector));
 
     if (!success && inode_sector != 0)
@@ -106,6 +109,7 @@ bool filesys_create(const char *name, off_t initial_size) {
     dir_close(dir);
 
     return success;
+#endif
 }
 
 /* Opens the file with the given NAME.
@@ -114,15 +118,16 @@ bool filesys_create(const char *name, off_t initial_size) {
  * Fails if no file named NAME exists,
  * or if an internal memory allocation fails. */
 struct file *filesys_open(const char *name) {
-    // struct dir *dir = dir_open_root();
-    // struct inode *inode = NULL;
+#ifndef EFILESYS
+    struct dir *dir = dir_open_root();
+    struct inode *inode = NULL;
 
-    // if (dir != NULL)
-    //     dir_lookup(dir, name, &inode);
-    // dir_close(dir);
+    if (dir != NULL)
+        dir_lookup(dir, name, &inode);
+    dir_close(dir);
 
-    // return file_open(inode);
-
+    return file_open(inode);
+#else
     if (strlen(name) == 1 && name[0] == '/')
         return file_open(dir_get_inode(dir_open_root()));
 
@@ -161,6 +166,7 @@ struct file *filesys_open(const char *name) {
     //     return NULL;
 
     return file_open(inode);
+#endif
 }
 
 /* Deletes the file named NAME.
@@ -244,7 +250,7 @@ struct dir *parse_path(char *path_name, char *file_name) {
     char *token, *next_token, *ptr;
     char *path = malloc(strlen(path_name) + 1);
     strlcpy(path, path_name, strlen(path_name) + 1);
-    
+
     token = strtok_r(path, "/", &ptr);
     next_token = strtok_r(NULL, "/", &ptr);
 
@@ -266,7 +272,7 @@ struct dir *parse_path(char *path_name, char *file_name) {
         next_token = strtok_r(NULL, "/", &ptr);
     }
 
-    if (token == NULL)
+    if (token == NULL || strlen(token) >= 128)
         goto err;
 
     struct inode *inode = NULL;
