@@ -786,6 +786,14 @@ int process_add_file(struct file *f) {
     if (curr->fd_idx >= FDCOUNT_LIMIT)
         return -1;
 
+    /** Project 4: File System - dir-vine test로 인해 비어있는 fdt 탐색하도록 수정 */
+    for (int i = 0; i < curr->fd_idx; i++) {
+        if (fdt[i] == NULL) {
+            fdt[i] = f;
+            return i;
+        }
+    }
+
     while (fdt[curr->fd_idx] != NULL)
         curr->fd_idx++;
 
