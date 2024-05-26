@@ -131,39 +131,33 @@ struct file *filesys_open(const char *name) {
     if (strlen(name) == 1 && name[0] == '/')
         return file_open(dir_get_inode(dir_open_root()));
 
-    struct dir *dir = dir_open_root();
-    struct inode *inode = NULL;
+    char file_name[128];
+    file_name[0] = '\0';
+    struct dir *dir_path = parse_path(name, file_name);
 
+    if (dir_path == NULL)
+        return NULL;
+
+    if (strlen(file_name) == 0) {  // 마지막이 디렉토리인 경우
+        struct inode *inode = dir_get_inode(dir_path);
+        if (inode == NULL)
+            return NULL;
+
+        if (inode_is_removed(inode))
+            return NULL;
+
+        return file_open(inode);
+    }
+
+    struct dir *dir = dir_reopen(dir_path);  // 마지막이 파일인 경우
+    struct inode *inode = NULL;
     if (dir != NULL)
-        dir_lookup(dir, name, &inode);
+        dir_lookup(dir, file_name, &inode);
+
     dir_close(dir);
 
-    // char file_name[128];
-    // file_name[0] = '\0';
-    // struct dir *dir_path = parse_path(name, file_name);
-    // if (dir_path == NULL)
-    //     return NULL;
-
-    // if (strlen(file_name) == 0) {  // 마지막이 디렉토리인 경우
-    //     struct inode *inode = dir_get_inode(dir_path);
-    //     if (inode == NULL)
-    //         return NULL;
-
-    //     if (inode_is_removed(inode) || inode_is_removed(dir_get_inode(thread_current()->cwd)))
-    //         return NULL;
-
-    //     return file_open(inode);
-    // }
-
-    // struct dir *dir = dir_reopen(dir_path);  // 마지막이 파일인 경우
-    // struct inode *inode = NULL;
-    // if (dir != NULL)
-    //     dir_lookup(dir, file_name, &inode);
-
-    // dir_close(dir);
-
-    // if (inode == NULL || inode_is_removed(inode))
-    //     return NULL;
+    if (inode == NULL || inode_is_removed(inode))
+        return NULL;
 
     return file_open(inode);
 #endif
@@ -174,45 +168,47 @@ struct file *filesys_open(const char *name) {
  * Fails if no file named NAME exists,
  * or if an internal memory allocation fails. */
 bool filesys_remove(const char *name) {
+#ifndef EFILESYS
     struct dir *dir = dir_open_root();
     bool success = dir != NULL && dir_remove(dir, name);
     dir_close(dir);
 
     return success;
+#else
+    char file_name[128];
+    file_name[0] = '\0';
+    bool success = false;
 
-    //     char file_name[128];
-    //     file_name[0] = '\0';
-    //     bool success = false;
+    struct dir *dir_path = parse_path(name, file_name);
 
-    //     struct dir *dir_path = parse_path(name, file_name);
+    if (dir_path == NULL)
+        goto done;
 
-    //     if (dir_path == NULL)
-    //         goto done;
+    if (strlen(file_name) == 0) {  // 대상이 디렉토리인 경우
+        struct inode *inode = NULL;
+        dir_lookup(dir_path, "..", &inode);
 
-    //     if (strlen(file_name) == 0) {  // 대상이 디렉토리인 경우
-    //         struct inode *inode = NULL;
-    //         dir_lookup(dir_path, "..", &inode);
+        if (!inode_is_dir(inode))
+            return false;
 
-    //         if (!inode_is_dir(inode))
-    //             return false;
+        struct dir *dir = dir_open(inode);
 
-    //         struct dir *dir = dir_open(inode);
+        if (!dir_is_empty(dir_path))
+            goto done;
 
-    //         if (!dir_is_empty(dir_path))
-    //             goto done;
+        dir_finddir(dir, dir_path, file_name);
+        dir_close(dir_path);
 
-    //         dir_finddir(dir, dir_path, file_name);
-    //         dir_close(dir_path);
+        return dir_remove(dir, file_name);
+    }
 
-    //         return dir_remove(dir, file_name);
-    //     }
+    struct dir *dir = dir_reopen(dir_path);  // 대상이 파일인 경우
+    success = dir != NULL && dir_remove(dir, file_name);
 
-    //     struct dir *dir = dir_reopen(dir_path);  // 대상이 파일인 경우
-    //     success = dir != NULL && dir_remove(dir, file_name);
-
-    // done:
-    //     dir_close(dir);
-    //     return success;
+done:
+    dir_close(dir);
+    return success;
+#endif
 }
 
 /* Formats the file system. */
@@ -228,11 +224,11 @@ static void do_format(void) {
     if (!dir_create(root, 16))
         PANIC("root directory creation failed");
 
-    // /* Root Directory에 ., .. 추가 */
-    // struct dir *root_dir = dir_open_root();
-    // dir_add(root_dir, ".", root);
-    // dir_add(root_dir, "..", root);
-    // dir_close(root_dir);
+    /* Root Directory에 ., .. 추가 */
+    struct dir *root_dir = dir_open_root();
+    dir_add(root_dir, ".", root);
+    dir_add(root_dir, "..", root);
+    dir_close(root_dir);
 
     fat_close();
 #else
