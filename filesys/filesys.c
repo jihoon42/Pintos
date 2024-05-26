@@ -175,7 +175,7 @@ bool filesys_remove(const char *name) {
     if (inode_is_dir(inode)) {  // 대상이 디렉토리인 경우
         struct dir *dir = dir_open(inode);
 
-        if (!dir_is_empty(dir))
+        if (!dir_is_empty(dir) || inode_is_removed(inode))
             return false;
 
         dir_finddir(dir, dir_path, target);
@@ -281,7 +281,7 @@ bool filesys_chdir(const char *dir_name) {
     if (!dir_lookup(dir, target, &inode))
         return false;
 
-    if (!inode_is_dir(inode))
+    if (!inode_is_dir(inode) || inode_is_removed(inode))
         return false;
 
     dir = file_open(inode);
