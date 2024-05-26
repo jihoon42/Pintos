@@ -397,16 +397,10 @@ void inode_close(struct inode *inode) {
         list_remove(&inode->elem);
 
         /* Deallocate blocks if removed. */
-        if (inode->removed) {
+        if (inode->removed)
             fat_remove_chain(inode->sector, 0);
-            // cluster_t clst = sector_to_cluster(inode->sector);  // disk inode 삭제
-            // fat_remove_chain(clst, 0);
 
-            // clst = sector_to_cluster(inode->data.start);  // file data 삭제
-            // fat_remove_chain(clst, 0);
-        }
-
-        // disk_write(filesys_disk, inode->sector, &inode->data);  // file close 시 변경사항 저장
+        disk_write(filesys_disk, inode->sector, &inode->data);  // file close 시 변경사항 저장
 
         free(inode);
     }
