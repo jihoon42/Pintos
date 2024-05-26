@@ -315,12 +315,12 @@ bool filesys_mkdir(const char *dir_name) {
         struct inode *inode = NULL;
         dir_lookup(dir, target, &inode);
         struct dir *new_dir = dir_open(inode);
-        dir_add(new_dir, ".", inode_sector);
-        dir_add(new_dir, "..", inode_get_inumber(dir_get_inode(dir)));
-        dir_close(new_dir);
+        
+        if (!dir_add(new_dir, ".", inode_sector))
+            success = false;
+        if (!dir_add(new_dir, "..", inode_get_inumber(dir_get_inode(dir))))
+            success = false;
     }
-
-    dir_close(dir);
 
     return success;
 }
