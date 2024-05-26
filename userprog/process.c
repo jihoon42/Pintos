@@ -206,7 +206,6 @@ static void __do_fork(void *aux) {
 
     process_init();
 
-
     /* Finally, switch to the newly created process. */
     if (succ)
         do_iret(&if_);  // 정상 종료 시 자식 Process를 수행하러 감

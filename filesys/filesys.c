@@ -244,6 +244,11 @@ struct dir *parse_path(char *path_name, char *file_name) {
     char *path = malloc(strlen(path_name) + 1);
     strlcpy(path, path_name, strlen(path_name) + 1);
 
+    if (path[0] != '/' && thread_current()->cwd != NULL) {
+        dir_close(dir);
+        dir = dir_reopen(thread_current()->cwd);
+    }
+
     token = strtok_r(path, "/", &ptr);
     next_token = strtok_r(NULL, "/", &ptr);
 
