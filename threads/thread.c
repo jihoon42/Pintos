@@ -128,8 +128,8 @@ void thread_init(void) {
     initial_thread->status = THREAD_RUNNING;
     initial_thread->tid = allocate_tid();
 
-    /** #Project 4: File System - cwd 초기화 */
-    initial_thread->cwd = NULL;
+    // /** #Project 4: File System - cwd 초기화 */
+    // initial_thread->cwd = NULL;
 }
 
 /* 인터럽트를 활성화하여 선점형 스레드 스케줄링을 시작합니다.
@@ -205,9 +205,9 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     init_thread(t, name, priority);
     tid = t->tid = allocate_tid();
 
-    /** #Project 4: File System - cwd 인계 */
-    if(thread_current()->cwd != NULL)
-		t->cwd = dir_reopen(thread_current()->cwd);
+    // /** #Project 4: File System - cwd 인계 */
+    // if(thread_current()->cwd != NULL)
+	// 	t->cwd = dir_reopen(thread_current()->cwd);
 
 #ifdef USERPROG
     /** #Project 2: System Call - 구조체 초기화 */

@@ -339,7 +339,6 @@ static disk_sector_t byte_to_sector(const struct inode *inode, off_t pos) {
  * Returns false if memory or disk allocation fails. */
 bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
     struct inode_disk *disk_inode = NULL;
-    cluster_t start_clst;
     bool success = false;
 
     ASSERT(length >= 0);
@@ -348,37 +347,34 @@ bool inode_create(disk_sector_t sector, off_t length, bool is_dir) {
     /* create disk_node and initialize*/
     disk_inode = calloc(1, sizeof *disk_inode);
     if (disk_inode != NULL) {
+        cluster_t start_clst = fat_create_chain(0);
         size_t sectors = bytes_to_sectors(length);
 
         disk_inode->length = length;
         disk_inode->magic = INODE_MAGIC;
         disk_inode->is_dir = is_dir;  // File or directory
+        disk_inode->start = cluster_to_sector(start_clst);
 
-        /* data cluster allocation */
-        if (start_clst = fat_create_chain(0)) {
-            disk_inode->start = cluster_to_sector(start_clst);
-            /* write disk_inode on disk */
-            disk_write(filesys_disk, sector, disk_inode);
+        /* write disk_inode on disk */
+        disk_write(filesys_disk, sector, disk_inode);
 
-            if (sectors > 0) {
-                static char zeros[DISK_SECTOR_SIZE];
-                cluster_t target = start_clst;
-                disk_sector_t w_sector;
-                size_t i;
+        if (sectors > 0) {
+            static char zeros[DISK_SECTOR_SIZE];
+            cluster_t target = start_clst;
+            disk_sector_t w_sector;
 
-                /* make cluster chain based length and initialize zero*/
-                while (sectors > 0) {
-                    w_sector = cluster_to_sector(target);
-                    disk_write(filesys_disk, w_sector, zeros);
+            /* make cluster chain based length and initialize zero*/
+            while (sectors > 0) {
+                w_sector = cluster_to_sector(target);
+                disk_write(filesys_disk, w_sector, zeros);
 
-                    target = fat_create_chain(target);
-                    sectors--;
-                }
+                target = fat_create_chain(target);
+                sectors--;
             }
-            success = true;
         }
-        free(disk_inode);
+        success = true;
     }
+    free(disk_inode);
     return success;
 }
 
@@ -397,14 +393,15 @@ void inode_close(struct inode *inode) {
 
         /* Deallocate blocks if removed. */
         if (inode->removed) {
-            cluster_t clst = sector_to_cluster(inode->sector);  // disk inode 삭제
-            fat_remove_chain(clst, 0);
+            fat_remove_chain(inode->sector, 0);
+            // cluster_t clst = sector_to_cluster(inode->sector);  // disk inode 삭제
+            // fat_remove_chain(clst, 0);
 
-            clst = sector_to_cluster(inode->data.start);  // file data 삭제
-            fat_remove_chain(clst, 0);
+            // clst = sector_to_cluster(inode->data.start);  // file data 삭제
+            // fat_remove_chain(clst, 0);
         }
 
-        disk_write(filesys_disk, inode->sector, &inode->data);  // file close 시 변경사항 저장
+        // disk_write(filesys_disk, inode->sector, &inode->data);  // file close 시 변경사항 저장
 
         free(inode);
     }
@@ -430,7 +427,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         /* Bytes left in inode, bytes left in sector, lesser of the two. */
         off_t inode_left = inode_length(inode) - offset;
         int sector_left = DISK_SECTOR_SIZE - sector_ofs;
-        int min_left = sector_left;  // 제한 삭제
+        int min_left = inode_left < sector_left ? inode_left : sector_left;
 
         /* Number of bytes to actually write into this sector. */
         int chunk_size = size < min_left ? size : min_left;
@@ -466,8 +463,8 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
     }
     free(bounce);
 
-    if (inode_length(inode) < ori_offset + bytes_written)  // inode length 갱신
-        inode->data.length = ori_offset + bytes_written;
+    // if (inode_length(inode) < ori_offset + bytes_written)  // inode length 갱신
+    //     inode->data.length = ori_offset + bytes_written;
 
     return bytes_written;
 }
