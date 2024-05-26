@@ -204,11 +204,6 @@ tid_t thread_create(const char *name, int priority, thread_func *function, void 
     /* Initialize thread. */
     init_thread(t, name, priority);
     tid = t->tid = allocate_tid();
-
-    /** #Project 4: File System - cwd 인계 */
-    if(thread_current()->cwd != NULL)
-		t->cwd = dir_reopen(thread_current()->cwd);
-
 #ifdef USERPROG
     /** #Project 2: System Call - 구조체 초기화 */
     t->fdt = palloc_get_multiple(PAL_ZERO, FDT_PAGES);

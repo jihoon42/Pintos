@@ -112,7 +112,7 @@ struct file *filesys_open(const char *name) {
     dir_close(dir);
 
     return file_open(inode);
-    
+
     // if (strlen(name) == 1 && name[0] == '/')
     //     return file_open(dir_get_inode(dir_open_root()));
 
@@ -157,39 +157,39 @@ bool filesys_remove(const char *name) {
 
     return success;
 
-//     char file_name[128];
-//     file_name[0] = '\0';
-//     bool success = false;
+    //     char file_name[128];
+    //     file_name[0] = '\0';
+    //     bool success = false;
 
-//     struct dir *dir_path = parse_path(name, file_name);
+    //     struct dir *dir_path = parse_path(name, file_name);
 
-//     if (dir_path == NULL)
-//         goto done;
+    //     if (dir_path == NULL)
+    //         goto done;
 
-//     if (strlen(file_name) == 0) {  // 대상이 디렉토리인 경우
-//         struct inode *inode = NULL;
-//         dir_lookup(dir_path, "..", &inode);
+    //     if (strlen(file_name) == 0) {  // 대상이 디렉토리인 경우
+    //         struct inode *inode = NULL;
+    //         dir_lookup(dir_path, "..", &inode);
 
-//         if (!inode_is_dir(inode))
-//             return false;
+    //         if (!inode_is_dir(inode))
+    //             return false;
 
-//         struct dir *dir = dir_open(inode);
+    //         struct dir *dir = dir_open(inode);
 
-//         if (!dir_is_empty(dir_path))
-//             goto done;
+    //         if (!dir_is_empty(dir_path))
+    //             goto done;
 
-//         dir_finddir(dir, dir_path, file_name);
-//         dir_close(dir_path);
+    //         dir_finddir(dir, dir_path, file_name);
+    //         dir_close(dir_path);
 
-//         return dir_remove(dir, file_name);
-//     }
+    //         return dir_remove(dir, file_name);
+    //     }
 
-//     struct dir *dir = dir_reopen(dir_path);  // 대상이 파일인 경우
-//     success = dir != NULL && dir_remove(dir, file_name);
+    //     struct dir *dir = dir_reopen(dir_path);  // 대상이 파일인 경우
+    //     success = dir != NULL && dir_remove(dir, file_name);
 
-// done:
-//     dir_close(dir);
-//     return success;
+    // done:
+    //     dir_close(dir);
+    //     return success;
 }
 
 /* Formats the file system. */

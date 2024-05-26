@@ -198,9 +198,14 @@ static void __do_fork(void *aux) {
     }
     /** -------------------------------------------- */
 
+    /** #Project 4: File System - cwd 인계 */
+    if (thread_current()->cwd != NULL)
+        current->cwd = dir_reopen(thread_current()->cwd);
+
     sema_up(&current->fork_sema);  // fork 프로세스가 정상적으로 완료됐으므로 현재 fork용 sema unblock
 
     process_init();
+
 
     /* Finally, switch to the newly created process. */
     if (succ)
@@ -295,7 +300,7 @@ void process_exit(void) {
 
     sema_up(&curr->wait_sema);  // 자식 프로세스가 종료될 때까지 대기하는 부모에게 signal
 
-    // dir_close(curr->cwd); /** #Project 4: File System */
+    dir_close(curr->cwd); /** #Project 4: File System */
 
     sema_down(&curr->exit_sema);  // 부모 프로세스가 종료될 떄까지 대기
 }
