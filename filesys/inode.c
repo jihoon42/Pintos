@@ -319,9 +319,7 @@ static disk_sector_t byte_to_sector(const struct inode *inode, off_t pos) {
 
     cluster_t target = sector_to_cluster(inode->data.start);
 
-    /* file length와 관계없이 pos에 크기에 따라 계속 진행
-       file length보다 pos가 크면 새로운 cluster를 할당해가면서 진행 */
-    while (pos >= DISK_SECTOR_SIZE) {
+    while (pos >= DISK_SECTOR_SIZE) {  // file length보다 pos가 크면 새로운 cluster를 할당
         if (fat_get(target) == EOChain)
             fat_create_chain(target);
 
@@ -408,8 +406,7 @@ void inode_close(struct inode *inode) {
 }
 
 /** #Project 4: File System - Writes SIZE bytes from BUFFER into INODE, starting at OFFSET.
- * Returns the number of bytes actually written, which may be less than SIZE if end of file is reached or an error occurs.
- * (Normally a write at end of file would extend the inode, but growth is not yet implemented.) */
+ * Returns the number of bytes actually written, which may be less than SIZE if end of file is reached or an error occurs. */
 off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t offset) {
     const uint8_t *buffer = buffer_;
     off_t bytes_written = 0;
@@ -425,9 +422,8 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         int sector_ofs = offset % DISK_SECTOR_SIZE;
 
         /* Bytes left in inode, bytes left in sector, lesser of the two. */
-        off_t inode_left = inode_length(inode) - offset;
         int sector_left = DISK_SECTOR_SIZE - sector_ofs;
-        int min_left = inode_left < sector_left ? inode_left : sector_left;
+        int min_left = sector_left;  // limit 없으므로 삭제
 
         /* Number of bytes to actually write into this sector. */
         int chunk_size = size < min_left ? size : min_left;
@@ -463,8 +459,8 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
     }
     free(bounce);
 
-    // if (inode_length(inode) < ori_offset + bytes_written)  // inode length 갱신
-    //     inode->data.length = ori_offset + bytes_written;
+    if (inode_length(inode) < ori_offset + bytes_written)  // inode length 갱신
+        inode->data.length = ori_offset + bytes_written;
 
     return bytes_written;
 }

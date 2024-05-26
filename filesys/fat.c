@@ -201,7 +201,7 @@ void fat_remove_chain(cluster_t clst, cluster_t pclst) {
     /* TODO: Your code goes here. */
     cluster_t target = clst;
 
-    if (pclst == 0)  // pcluster 입력 -> pcluster를 chain으로 끝으로 만듬 */
+    if (pclst == 0)
         fat_put(pclst, EOChain);
     else {
         while (fat_get(target) != EOChain) {  // 순회하면서 FAT에서 할당 해제
