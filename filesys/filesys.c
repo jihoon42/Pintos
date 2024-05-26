@@ -88,6 +88,9 @@ bool filesys_create(const char *name, off_t initial_size) {
     if (dir_path == NULL || inode_is_removed(dir_get_inode(dir_path)))
         return false;
 
+    while (inode_get_type(dir_get_inode(dir_path)) == 2)
+        dir_path = dir_open(link_get_inode(dir_get_inode(dir_path)));
+
     // struct dir *dir = dir_open_root();
     struct dir *dir = dir_reopen(dir_path);
 
@@ -133,6 +136,9 @@ struct file *filesys_open(const char *name) {
     if (dir_path == NULL || inode_is_removed(dir_get_inode(dir_path)))
         return NULL;
 
+    while (inode_get_type(dir_get_inode(dir_path)) == 2)
+        dir_path = dir_open(link_get_inode(dir_get_inode(dir_path)));
+        
     struct dir *dir = dir_reopen(dir_path);
 
     if (!dir_lookup(dir, target, &inode))
@@ -140,6 +146,9 @@ struct file *filesys_open(const char *name) {
 
     if (inode_is_removed(inode))
         return NULL;
+
+    if (inode_get_type(inode) != 0)
+        return dir_open(inode);
 
     return file_open(inode);
 #endif
@@ -173,7 +182,7 @@ bool filesys_remove(const char *name) {
 
     dir_lookup(dir_path, target, &inode);
 
-    if (inode_is_dir(inode)) {  // 대상이 디렉토리인 경우
+    if (inode_get_type(inode) == 1) {  // 대상이 디렉토리인 경우
         struct dir *dir = dir_open(inode);
 
         if (!dir_is_empty(dir) || inode_is_removed(inode))
@@ -181,15 +190,20 @@ bool filesys_remove(const char *name) {
 
         dir_finddir(dir, dir_path, target);
         dir_close(dir);
-        
+
         return dir_remove(dir_path, target);
     }
 
-    struct dir *file = dir_reopen(dir_path);  // 대상이 파일인 경우
+    struct dir *file = dir_reopen(dir_path);  // 그 외의 경우
+    bool is_link = inode_get_type(inode) == 2 ? true : false;
+
     success = file != NULL && dir_remove(file, target);
 
     if (dir_lookup(dir_path, target, &inode))
         return false;
+
+    if (is_link)
+        return success;
 
     file_close(file);
 done:
@@ -250,7 +264,7 @@ struct dir *parse_path(char *path_name, char *target) {
         if (!dir_lookup(dir, token, &inode))
             goto err;
 
-        if (!inode_is_dir(inode))
+        if (inode_get_type(inode) == 0)
             goto err;
 
         dir_close(dir);
@@ -281,7 +295,7 @@ bool filesys_chdir(const char *dir_name) {
     if (!dir_lookup(dir, target, &inode))
         return false;
 
-    if (!inode_is_dir(inode) || inode_is_removed(inode))
+    if (inode_get_type(inode) != 1 || inode_is_removed(inode))
         return false;
 
     dir = dir_open(inode);
@@ -327,4 +341,79 @@ bool filesys_mkdir(const char *dir_name) {
     dir_close(dir);
 
     return success;
+}
+
+bool filesys_symlink(const char *target, const char *linkpath) {
+    cluster_t inode_cluster = fat_create_chain(0);
+    disk_sector_t inode_sector = cluster_to_sector(inode_cluster);
+    struct inode *target_inode = NULL;
+    struct inode *inode = NULL;
+    bool success;
+
+    char link_name[128], target_name[128];
+    link_name[0] = '\0';
+    target_name[0] = '\0';
+
+    struct dir *target_dir = parse_path(target, target_name);
+
+    if (strcmp(target_name, "") == 0)
+        return false;
+
+    if (target_dir == NULL || inode_is_removed(dir_get_inode(target_dir)))
+        return false;
+
+    if (!dir_lookup(target_dir, target_name, &target_inode))
+        target_inode = filesys_dummy_create(target_name);
+
+    struct dir *link_dir = parse_path(linkpath, link_name);
+
+    if (strcmp(link_name, "") == 0)
+        return false;
+
+    if (link_dir == NULL || inode_is_removed(dir_get_inode(link_dir)))
+        return false;
+
+    success = (link_dir != NULL && inode_create(inode_sector, 0, LINK_TYPE) && dir_add(link_dir, link_name, inode_sector));
+
+    dir_lookup(link_dir, link_name, &inode);
+
+    inode_set_link(inode, target_inode);
+
+    if (!success && inode_sector != 0)
+        fat_remove_chain(inode_cluster, 1);
+
+    return success;
+}
+
+struct inode *filesys_dummy_create(const char *name) {
+    cluster_t inode_cluster = fat_create_chain(0);
+    disk_sector_t inode_sector = cluster_to_sector(inode_cluster);
+    struct inode *inode = NULL;
+    bool success;
+
+    char target[128];
+    target[0] = '\0';
+
+    struct dir *dir_path = parse_path(name, target);
+
+    if (strcmp(target, "") == 0)
+        return NULL;
+
+    if (dir_path == NULL || inode_is_removed(dir_get_inode(dir_path)))
+        return NULL;
+
+    while (inode_get_type(dir_get_inode(dir_path)) == 2)
+        dir_path = dir_open(link_get_inode(dir_get_inode(dir_path)));
+
+    struct dir *dir = dir_reopen(dir_path);
+
+    success = (dir != NULL && inode_create(inode_sector, 0, FILE_TYPE) && dummy_add(dir, target, inode_sector));
+
+    if (!success && inode_sector != 0)
+        fat_remove_chain(inode_cluster, 1);
+
+    if (dir_lookup(dir, target, &inode))
+        return inode;
+
+    return NULL;
 }
