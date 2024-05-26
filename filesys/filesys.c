@@ -271,10 +271,10 @@ struct dir *parse_path(char *path_name, char *file_name) {
     struct inode *inode = NULL;
 
     dir_lookup(dir, token, &inode);
-    if (inode == NULL || inode_is_removed(inode)) {
-        strlcpy(file_name, token, strlen(token) + 1);
+
+    if (inode == NULL || inode_is_removed(inode))
         goto copy;
-    }
+
     if (inode_is_dir(inode)) {  // 마지막이 디렉토리인 경우
         dir_close(dir);
         dir = dir_open(inode);
