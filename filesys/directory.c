@@ -230,8 +230,8 @@ bool dir_lookup(const struct dir *dir, const char *name, struct inode **inode) {
     else
         *inode = NULL;
 
-    if (!strcmp(name, "."))
-        *inode = dir_get_inode(dir);
+    // if (!strcmp(name, "."))
+    //     *inode = dir_get_inode(dir);
 
     return *inode != NULL;
 }

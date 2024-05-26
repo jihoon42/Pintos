@@ -85,7 +85,7 @@ bool filesys_create(const char *name, off_t initial_size) {
     if (strcmp(target, "") == 0)
         return false;
 
-    if (dir_path == NULL)
+    if (dir_path == NULL || inode_is_removed(dir_get_inode(dir_path)))
         return false;
 
     // struct dir *dir = dir_open_root();
@@ -127,31 +127,18 @@ struct file *filesys_open(const char *name) {
 
     char target[128];
     target[0] = '\0';
+    struct inode *inode = NULL;
     struct dir *dir_path = parse_path(name, target);
 
     if (dir_path == NULL)
         return NULL;
 
-    if (strlen(target) == 0) {  // 마지막이 디렉토리인 경우
-        struct inode *inode = dir_get_inode(dir_path);
-        if (inode == NULL)
-            return NULL;
+    struct dir *dir = dir_reopen(dir_path);
 
-        if (inode_is_removed(inode))
-            return NULL;
-
-        return file_open(inode);
-    }
-
-    struct dir *dir = dir_reopen(dir_path);  // 마지막이 파일인 경우
-    struct inode *inode = NULL;
-    if (dir != NULL)
-        dir_lookup(dir, target, &inode);
-
-    dir_close(dir);
-
-    if (inode == NULL || inode_is_removed(inode))
+    if (!dir_lookup(dir, target, &inode)) {
+        dir_close(dir);
         return NULL;
+    }
 
     return file_open(inode);
 #endif
@@ -185,10 +172,7 @@ bool filesys_remove(const char *name) {
 
     dir_lookup(dir_path, target, &inode);
 
-    if (inode_is_dir(inode)) {                  // 대상이 디렉토리인 경우
-        if (thread_current()->cwd == dir_path)  // 현재 working directory 삭제 금지
-            return false;
-
+    if (inode_is_dir(inode)) {  // 대상이 디렉토리인 경우
         struct dir *dir = dir_open(inode);
 
         if (!dir_is_empty(dir))
@@ -294,10 +278,13 @@ bool filesys_chdir(const char *dir_name) {
     target[0] = '\0';
     struct dir *dir = parse_path(dir_name, target);
 
-    dir_lookup(dir, target, &inode);
+    if (!dir_lookup(dir, target, &inode))
+        return false;
 
     if (!inode_is_dir(inode))
         return false;
+
+    dir = file_open(inode);
 
     thread_current()->cwd = dir;
 
