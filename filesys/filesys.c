@@ -101,7 +101,40 @@ bool filesys_remove(const char *name) {
 
     return success;
 }
+#endif
+
+/* Formats the file system. */
+static void do_format(void) {
+    printf("Formatting file system...");
+
+#ifdef EFILESYS
+    /* Create FAT and save it to the disk. */
+    fat_create();
+
+    /* Root Directory 생성 */
+    disk_sector_t root = cluster_to_sector(ROOT_DIR_CLUSTER);
+    if (!dir_create(root, 16))
+        PANIC("root directory creation failed");
+
+    /* Root Directory에 ., .. 추가 */
+    struct dir *root_dir = dir_open_root();
+    dir_add(root_dir, ".", root);
+    dir_add(root_dir, "..", root);
+    dir_close(root_dir);
+
+    fat_close();
 #else
+    free_map_create();
+    if (!dir_create(ROOT_DIR_SECTOR, 16))
+        PANIC("root directory creation failed");
+    free_map_close();
+#endif
+
+    printf("done.\n");
+}
+
+/** #Project 4: File System */
+#ifdef EFILESYS
 /** #Project 4: File System - Creates a file named NAME with the given INITIAL_SIZE.
  * Returns true if successful, false otherwise.
  * Fails if a file named NAME already exists, or if internal memory allocation fails. */
@@ -179,73 +212,39 @@ bool filesys_remove(const char *name) {
     char file_name[128];
     file_name[0] = '\0';
     bool success = false;
+
     struct dir *dir_path = parse_path(name, file_name);
+
     if (dir_path == NULL)
-        return false;
+        goto done;
 
-    if (strlen(file_name) == 0) {  // 대상이 디렉터리일 경우
+    if (strlen(file_name) == 0) {  // 대상이 디렉토리인 경우
         struct inode *inode = NULL;
-
         dir_lookup(dir_path, "..", &inode);
 
         if (!inode_is_dir(inode))
             return false;
 
-        struct dir *upper_dir = dir_open(inode);
+        struct dir *dir = dir_open(inode);
 
-        if (!dir_is_empty(dir_path)) {
-            dir_close(upper_dir);
-            return false;
-        }
+        if (!dir_is_empty(dir_path))
+            goto done;
 
-        dir_finddir(upper_dir, dir_path, file_name);
+        dir_finddir(dir, dir_path, file_name);
         dir_close(dir_path);
 
-        return dir_remove(upper_dir, file_name);
+        return dir_remove(dir, file_name);
     }
 
-    struct dir *dir = dir_reopen(dir_path);  // 대상이 파일일 경우
+    struct dir *dir = dir_reopen(dir_path);  // 대상이 파일인 경우
     success = dir != NULL && dir_remove(dir, file_name);
-    dir_close(dir);
 
+done:
+    dir_close(dir);
     return success;
 }
 
-#endif
-
-/* Formats the file system. */
-static void do_format(void) {
-    printf("Formatting file system...");
-
-#ifdef EFILESYS
-    /* Create FAT and save it to the disk. */
-    fat_create();
-
-    /* Root Directory 생성 */
-    disk_sector_t root = cluster_to_sector(ROOT_DIR_CLUSTER);
-    if (!dir_create(root, 16))
-        PANIC("root directory creation failed");
-
-    /* Root Directory에 ., .. 추가 */
-    struct dir *root_dir = dir_open_root();
-    dir_add(root_dir, ".", root);
-    dir_add(root_dir, "..", root);
-    dir_close(root_dir);
-
-    fat_close();
-#else
-    free_map_create();
-    if (!dir_create(ROOT_DIR_SECTOR, 16))
-        PANIC("root directory creation failed");
-    free_map_close();
-#endif
-
-    printf("done.\n");
-}
-
-/** #Project 4: File System */
-#ifdef EFILESYS
-struct dir *parse_path(const char *path_name, char *file_name) {
+struct dir *parse_path(char *path_name, char *file_name) {
     struct dir *dir = dir_open_root();
     char *token, *next_token, *ptr;
     char *path = malloc(strlen(path_name) + 1);
@@ -259,10 +258,10 @@ struct dir *parse_path(const char *path_name, char *file_name) {
     token = strtok_r(path, "/", &ptr);
     next_token = strtok_r(NULL, "/", &ptr);
 
-    if (!token)  // path_name = "/" 만 입력되었을 때
+    if (token == NULL)  // path_name = "/" 만 입력되었을 때
         return dir_open_root();
 
-    while (!next_token) {
+    while (next_token != NULL) {
         struct inode *inode = NULL;
         if (!dir_lookup(dir, token, &inode))
             goto err;
@@ -272,14 +271,22 @@ struct dir *parse_path(const char *path_name, char *file_name) {
 
         dir_close(dir);
         dir = dir_open(inode);
+
+        token = next_token;
+        next_token = strtok_r(NULL, "/", &ptr);
     }
 
-    if (!token)
+    if (token == NULL)
         goto err;
 
     struct inode *inode = NULL;
 
     dir_lookup(dir, token, &inode);
+
+    if (inode == NULL || inode_is_removed(inode)) {
+        strlcpy(file_name, token, strlen(token) + 1);
+        return dir;
+    }
 
     if (inode_is_dir(inode)) {  // 마지막이 디렉토리인 경우
         dir_close(dir);
@@ -320,14 +327,13 @@ bool filesys_mkdir(const char *dir_name) {
 
     struct dir *dir = dir_reopen(dir_path);
 
-    /* 할당 받은 cluster에 inode를 만들고 directory에 file 추가 */
+    // 할당 받은 cluster에 inode를 만들고 directory에 file 추가
     bool success = (dir != NULL && inode_create(inode_sector, 0, DIR_TYPE) && dir_add(dir, file_name, inode_sector));
 
     if (!success && inode_cluster != 0)
         fat_remove_chain(inode_cluster, 0);
 
-    /* directory에 .과 .. 추가 */
-    if (success) {
+    if (success) {  // directory에 .과 .. 추가
         struct inode *inode = NULL;
         dir_lookup(dir, file_name, &inode);
         struct dir *new_dir = dir_open(inode);

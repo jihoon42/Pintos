@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "filesys/fat.h"
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
@@ -42,11 +43,13 @@ struct dir *dir_open(struct inode *inode) {
     }
 }
 
+#ifndef EFILESYS
 /* Opens the root directory and returns a directory for it.
  * Return true if successful, false on failure. */
 struct dir *dir_open_root(void) {
     return dir_open(inode_open(ROOT_DIR_SECTOR));
 }
+#endif
 
 /* Opens and returns a new directory for the same inode as DIR.
  * Returns a null pointer on failure. */
@@ -90,6 +93,7 @@ static bool lookup(const struct dir *dir, const char *name, struct dir_entry *ep
     return false;
 }
 
+#ifndef EFILESYS
 /* Searches DIR for a file with the given NAME
  * and returns true if one exists, false otherwise.
  * On success, sets *INODE to an inode for the file, otherwise to
@@ -107,7 +111,7 @@ bool dir_lookup(const struct dir *dir, const char *name, struct inode **inode) {
 
     return *inode != NULL;
 }
-
+#endif
 /* Adds a file named NAME to DIR, which must not already contain a
  * file by that name.  The file's inode is in sector
  * INODE_SECTOR.
@@ -151,6 +155,7 @@ done:
     return success;
 }
 
+#ifndef EFILESYS
 /* Removes any entry for NAME in DIR.
  * Returns true if successful, false on failure,
  * which occurs only if there is no file with the given NAME. */
@@ -201,6 +206,93 @@ bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1]) {
     }
     return false;
 }
+#endif
+
+#ifdef EFILESYS
+/** #Project 4: File System - Opens the root directory and returns a directory for it.
+ * Return true if successful, false on failure. */
+struct dir *dir_open_root(void) {
+    return dir_open(inode_open(cluster_to_sector(ROOT_DIR_CLUSTER)));
+}
+
+/** #Project 4: File System - Searches DIR for a file with the given NAME
+ * and returns true if one exists, false otherwise.
+ * On success, sets *INODE to an inode for the file, otherwise to
+ * a null pointer.  The caller must close *INODE. */
+bool dir_lookup(const struct dir *dir, const char *name, struct inode **inode) {
+    struct dir_entry e;
+
+    ASSERT(dir != NULL);
+    ASSERT(name != NULL);
+
+    if (lookup(dir, name, &e, NULL))
+        *inode = inode_open(e.inode_sector);
+    else
+        *inode = NULL;
+
+    if (!strcmp(name, "."))
+        *inode = dir_get_inode(dir);
+
+    return *inode != NULL;
+}
+
+/** #Project 4: File System - Removes any entry for NAME in DIR.
+ * Returns true if successful, false on failure,
+ * which occurs only if there is no file with the given NAME. */
+bool dir_remove(struct dir *dir, const char *name) {
+    struct dir_entry e;
+    struct inode *inode = NULL;
+    bool success = false;
+    off_t ofs;
+
+    ASSERT(dir != NULL);
+    ASSERT(name != NULL);
+
+    if (name == "." || name == "..")
+        return false;
+
+    /* Find directory entry. */
+    if (!lookup(dir, name, &e, &ofs))
+        goto done;
+
+    /* Open inode. */
+    inode = inode_open(e.inode_sector);
+    if (inode == NULL)
+        goto done;
+
+    /* Erase directory entry. */
+    e.in_use = false;
+    if (inode_write_at(dir->inode, &e, sizeof e, ofs) != sizeof e)
+        goto done;
+
+    /* Remove inode. */
+    inode_remove(inode);
+    success = true;
+
+done:
+    inode_close(inode);
+    return success;
+}
+
+/* Reads the next directory entry in DIR and stores the name in
+ * NAME.  Returns true if successful, false if the directory
+ * contains no more entries. */
+bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1]) {
+    struct dir_entry e;
+
+    while (inode_read_at(dir->inode, &e, sizeof e, dir->pos) == sizeof e) {
+        dir->pos += sizeof e;
+        if (!strcmp(e.name, ".") || !strcmp(e.name, ".."))
+            continue;
+
+        if (e.in_use) {
+            strlcpy(name, e.name, NAME_MAX + 1);
+            return true;
+        }
+    }
+    return false;
+}
+#endif
 
 /** #Project 4: File System - Opens and returns the finding directory. */
 bool dir_finddir(struct dir *dir, struct dir *child_dir, char name[NAME_MAX + 1]) {

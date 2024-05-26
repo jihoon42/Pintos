@@ -143,7 +143,7 @@ void fat_boot_create(void) {
     };
 }
 
-/** Project 4: Indexed and Extensible Files - filesys 초기화
+/** Project 4: Filesys - filesys 초기화
  * 당신은 fat_fs의 fat_length와 data_start 필드를 초기화해야 합니다. fat_length는 파일시스템에 몇 개의 클러스터가 있는지에 대한 정보를 저장하고,
  * data_start는 어떤 섹터에서 파일 저장을 시작할 수 있는지에 대한 정보를 저장합니다. 당신은 어쩌면 fat_fs->bs 에 저장된 값을 이용하고 싶어질 수도
  * 있습니다. 또한, 이 함수에서 다른 유용한 데이터를 초기화하고 싶어질수도 있습니다. */
@@ -156,17 +156,17 @@ void fat_fs_init(void) {
 /*----------------------------------------------------------------------------*/
 /* FAT handling                                                               */
 /*----------------------------------------------------------------------------*/
-/** Project 4: Indexed and Extensible Files */
+/** Project 4: Filesys */
 cluster_t get_empty_cluster(void) {
     cluster_t clst = fat_fs->bs.root_dir_cluster + 1;
     cluster_t fat_length = fat_fs->fat_length;
 
     for (clst; clst < fat_length; clst++) {
         if (fat_get(clst) == 0)
-            return clst;
+            break;
     }
 
-    return 0;
+    return clst;
 }
 
 /* Add a cluster to the chain.
@@ -174,12 +174,9 @@ cluster_t get_empty_cluster(void) {
  * Returns 0 if fails to allocate a new cluster. */
 cluster_t fat_create_chain(cluster_t clst) {
     /* TODO: Your code goes here. */
-    if (clst == EOChain)
-        return 0;
-
     cluster_t empty_clst = get_empty_cluster();
 
-    if (!empty_clst)  // empty cluster가 없을 때
+    if (empty_clst >= fat_fs->fat_length)  // empty cluster가 없을 때
         return 0;
 
     fat_put(empty_clst, EOChain);
@@ -198,7 +195,7 @@ done:
     return empty_clst;
 }
 
-/** Project 4: Indexed and Extensible Files - Remove the chain of clusters starting from CLST.
+/** Project 4: Filesys - Remove the chain of clusters starting from CLST.
  * If PCLST is 0, assume CLST as the start of the chain. */
 void fat_remove_chain(cluster_t clst, cluster_t pclst) {
     /* TODO: Your code goes here. */
@@ -214,26 +211,26 @@ void fat_remove_chain(cluster_t clst, cluster_t pclst) {
         fat_put(pclst, EOChain);
 }
 
-/** Project 4: Indexed and Extensible Files - Update a value in the FAT table. */
+/** Project 4: Filesys - Update a value in the FAT table. */
 void fat_put(cluster_t clst, cluster_t val) {
     /* TODO: Your code goes here. */
     fat_fs->fat[clst] = val;
 }
 
-/** Project 4: Indexed and Extensible Files - Fetch a value in the FAT table. */
+/** Project 4: Filesys - Fetch a value in the FAT table. */
 cluster_t fat_get(cluster_t clst) {
     /* TODO: Your code goes here. */
     return fat_fs->fat[clst];
 }
 
-/** Project 4: Indexed and Extensible Files - Covert a cluster # to a sector number.
+/** Project 4: Filesys - Covert a cluster # to a sector number.
  * 클러스터 넘버 clst를 상응하는 섹터 넘버로 변환하고, 그 섹터 넘버를 리턴합니다. */
 disk_sector_t cluster_to_sector(cluster_t clst) {
     /* TODO: Your code goes here. */
     return fat_fs->data_start + clst;
 }
 
-/** Project 4: Indexed and Extensible Files - 섹터 넘버를 clst로 변환해서 리턴 */
+/** Project 4: Filesys - 섹터 넘버를 clst로 변환해서 리턴 */
 cluster_t sector_to_cluster(disk_sector_t sctr) {
     cluster_t clst = sctr - fat_fs->data_start;
 

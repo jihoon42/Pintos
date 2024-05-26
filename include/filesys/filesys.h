@@ -24,7 +24,7 @@ bool filesys_remove(const char *name);
 
 #ifdef FILESYS
 /** #Project 4: File System */
-struct dir *parse_path(const char *path_name, char *file_name);
+struct dir *parse_path(char *, char *);
 bool filesys_chdir(const char *dir_name);
 bool filesys_mkdir(const char *dir_name);
 #endif

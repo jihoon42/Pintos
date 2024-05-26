@@ -295,6 +295,8 @@ void process_exit(void) {
 
     sema_up(&curr->wait_sema);  // 자식 프로세스가 종료될 때까지 대기하는 부모에게 signal
 
+    dir_close(curr->cwd); /** #Project 4: File System */
+
     sema_down(&curr->exit_sema);  // 부모 프로세스가 종료될 떄까지 대기
 }
 

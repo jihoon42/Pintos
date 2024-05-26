@@ -458,6 +458,9 @@ bool readdir(int fd, char name[READDIR_MAX_LEN + 1]) {
 bool isdir(int fd) {
     struct file *file = process_get_file(fd);
 
+    if (!file)
+        return false;
+
     return inode_is_dir(file->inode);
 }
 

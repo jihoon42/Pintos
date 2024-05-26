@@ -417,7 +417,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
     const uint8_t *buffer = buffer_;
     off_t bytes_written = 0;
     uint8_t *bounce = NULL;
-    off_t ori_offset = offset; // backup
+    off_t ori_offset = offset;  // backup
 
     if (inode->deny_write_cnt)
         return 0;
@@ -430,7 +430,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
         /* Bytes left in inode, bytes left in sector, lesser of the two. */
         off_t inode_left = inode_length(inode) - offset;
         int sector_left = DISK_SECTOR_SIZE - sector_ofs;
-        int min_left = sector_left; // 제한 삭제
+        int min_left = sector_left;  // 제한 삭제
 
         /* Number of bytes to actually write into this sector. */
         int chunk_size = size < min_left ? size : min_left;
@@ -466,7 +466,7 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
     }
     free(bounce);
 
-    if (inode_length(inode) < ori_offset + bytes_written) // inode length 갱신
+    if (inode_length(inode) < ori_offset + bytes_written)  // inode length 갱신
         inode->data.length = ori_offset + bytes_written;
 
     return bytes_written;
