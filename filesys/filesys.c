@@ -130,15 +130,16 @@ struct file *filesys_open(const char *name) {
     struct inode *inode = NULL;
     struct dir *dir_path = parse_path(name, target);
 
-    if (dir_path == NULL)
+    if (dir_path == NULL || inode_is_removed(dir_get_inode(dir_path)))
         return NULL;
 
     struct dir *dir = dir_reopen(dir_path);
 
-    if (!dir_lookup(dir, target, &inode)) {
-        dir_close(dir);
+    if (!dir_lookup(dir, target, &inode))
         return NULL;
-    }
+
+    if (inode_is_removed(inode))
+        return NULL;
 
     return file_open(inode);
 #endif
@@ -315,7 +316,7 @@ bool filesys_mkdir(const char *dir_name) {
         struct inode *inode = NULL;
         dir_lookup(dir, target, &inode);
         struct dir *new_dir = dir_open(inode);
-        
+
         if (!dir_add(new_dir, ".", inode_sector))
             success = false;
         if (!dir_add(new_dir, "..", inode_get_inumber(dir_get_inode(dir))))

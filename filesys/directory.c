@@ -230,9 +230,6 @@ bool dir_lookup(const struct dir *dir, const char *name, struct inode **inode) {
     else
         *inode = NULL;
 
-    // if (!strcmp(name, "."))
-    //     *inode = dir_get_inode(dir);
-
     return *inode != NULL;
 }
 
@@ -294,7 +291,8 @@ bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1]) {
 }
 #endif
 
-/** #Project 4: File System - Opens and returns the finding directory. */
+/** #Project 4: File System - Opens and returns the finding directory.
+ *  This function is made for remove directory. */
 bool dir_finddir(struct dir *dir, struct dir *child_dir, char name[NAME_MAX + 1]) {
     struct dir_entry e;
 
