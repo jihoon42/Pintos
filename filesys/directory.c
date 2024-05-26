@@ -282,8 +282,8 @@ bool dir_readdir(struct dir *dir, char name[NAME_MAX + 1]) {
 
     while (inode_read_at(dir->inode, &e, sizeof e, dir->pos) == sizeof e) {
         dir->pos += sizeof e;
-        // if (!strcmp(e.name, ".") || !strcmp(e.name, ".."))
-        //     continue;
+        if (!strcmp(e.name, ".") || !strcmp(e.name, ".."))
+            continue;
 
         if (e.in_use) {
             strlcpy(name, e.name, NAME_MAX + 1);
@@ -315,7 +315,7 @@ bool dir_is_empty(struct dir *dir) {
     char name_in_dir[15];
     int count = 0;
 
-    while (dir_readdir(dir, name_in_dir))
+     while (dir_readdir(dir, name_in_dir))
         count++;
 
     if (count == 0)
