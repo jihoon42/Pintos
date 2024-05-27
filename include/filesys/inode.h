@@ -9,7 +9,7 @@
 struct bitmap;
 
 void inode_init(void);
-bool inode_create(disk_sector_t, off_t, bool);
+bool inode_create(disk_sector_t, off_t, int32_t);
 struct inode *inode_open(disk_sector_t);
 struct inode *inode_reopen(struct inode *);
 disk_sector_t inode_get_inumber(const struct inode *);
@@ -22,7 +22,13 @@ void inode_allow_write(struct inode *);
 off_t inode_length(const struct inode *);
 
 /** #Project 4: File System */
-bool inode_is_dir(const struct inode *);
+int32_t inode_get_type(const struct inode *);
 bool inode_is_removed(const struct inode *);
+
+/** #Project 4: Soft Link */
+void inode_set_linkpath(struct inode *, const char *);
+char *inode_get_linkpath(struct inode *);
+struct inode * check_is_link(struct inode *);
+struct inode * return_is_link(struct inode *);
 
 #endif /* filesys/inode.h */

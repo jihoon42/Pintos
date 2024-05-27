@@ -446,7 +446,7 @@ bool mkdir(const char *dir) {
 bool readdir(int fd, char name[READDIR_MAX_LEN + 1]) {
     struct file *file = process_get_file(fd);
 
-    if (!file || !inode_is_dir(file->inode))
+    if (!file || inode_get_type(file->inode) != 1)
         return false;
 
     struct dir *dir = file;
@@ -461,7 +461,7 @@ bool isdir(int fd) {
     if (!file)
         return false;
 
-    return inode_is_dir(file->inode);
+    return inode_get_type(file->inode) == 1 ? true : false;
 }
 
 /** #Project 4: File System - Returns the inode number of the inode associated with fd, which may represent an ordinary file or a directory. */
@@ -473,6 +473,9 @@ int inumber(int fd) {
 
 /** #Project 4: Soft Links - Creates a symbolic link named linkpath which contains the string target. */
 int symlink(const char *target, const char *linkpath) {
-    return -1;  // false
+    check_address(target);
+    check_address(linkpath);
+
+    return filesys_symlink(target, linkpath) ? 0 : -1;
 }
 #endif

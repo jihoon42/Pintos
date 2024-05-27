@@ -173,7 +173,7 @@ bool filesys_remove(const char *name) {
 
     dir_lookup(dir_path, target, &inode);
 
-    if (inode_is_dir(inode)) {  // 대상이 디렉토리인 경우
+    if (inode_get_type(inode) == 1) {  // 대상이 디렉토리인 경우
         struct dir *dir = dir_open(inode);
 
         if (!dir_is_empty(dir) || inode_is_removed(inode))
@@ -181,11 +181,12 @@ bool filesys_remove(const char *name) {
 
         dir_finddir(dir, dir_path, target);
         dir_close(dir);
-        
+
         return dir_remove(dir_path, target);
     }
 
     struct dir *file = dir_reopen(dir_path);  // 대상이 파일인 경우
+
     success = file != NULL && dir_remove(file, target);
 
     if (dir_lookup(dir_path, target, &inode))
@@ -250,8 +251,14 @@ struct dir *parse_path(char *path_name, char *target) {
         if (!dir_lookup(dir, token, &inode))
             goto err;
 
-        if (!inode_is_dir(inode))
-            goto err;
+        while (inode_get_type(inode) == 2) {  // link 처리 부분
+            char target[128];
+            target[0] = '\0';
+
+            struct dir *target_dir = parse_path(inode_get_linkpath(inode), target);
+
+            dir_lookup(target_dir, target, &inode);
+        }
 
         dir_close(dir);
         dir = dir_open(inode);
@@ -281,7 +288,7 @@ bool filesys_chdir(const char *dir_name) {
     if (!dir_lookup(dir, target, &inode))
         return false;
 
-    if (!inode_is_dir(inode) || inode_is_removed(inode))
+    if (inode_get_type(inode) == 0 || inode_is_removed(inode))
         return false;
 
     dir = dir_open(inode);
@@ -325,6 +332,39 @@ bool filesys_mkdir(const char *dir_name) {
     }
 
     dir_close(dir);
+
+    return success;
+}
+
+bool filesys_symlink(const char *target, const char *linkpath) {
+    cluster_t inode_cluster = fat_create_chain(0);
+    disk_sector_t inode_sector = cluster_to_sector(inode_cluster);
+
+    struct inode *target_inode = NULL;
+    struct inode *inode = NULL;
+    bool success;
+
+    char link_name[128];
+    link_name[0] = '\0';
+
+    struct dir *link_dir = parse_path(linkpath, link_name);
+
+    if (strcmp(link_name, "") == 0)
+        return false;
+
+    if (link_dir == NULL || inode_is_removed(dir_get_inode(link_dir)))
+        return false;
+
+    success = (link_dir != NULL && inode_create(inode_sector, 0, LINK_TYPE) && dir_add(link_dir, link_name, inode_sector));
+
+    if (!success && inode_sector != 0) {
+        fat_remove_chain(inode_cluster, 1);
+        return success;
+    }
+
+    dir_lookup(link_dir, link_name, &inode);
+
+    inode_set_linkpath(inode, target);
 
     return success;
 }

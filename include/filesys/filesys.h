@@ -12,6 +12,7 @@
 /** #Project 4: File System - define types */
 #define FILE_TYPE 0
 #define DIR_TYPE  1
+#define LINK_TYPE 2
 
 /* Disk used for file system. */
 extern struct disk *filesys_disk;
