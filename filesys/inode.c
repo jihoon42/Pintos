@@ -395,6 +395,8 @@ void inode_close(struct inode *inode) {
 
     /* Release resources if this was the last opener. */
     if (--inode->open_cnt == 0) {
+        inode = check_is_link(inode); // link 처리
+
         /* Remove from inode list and release lock. */
         list_remove(&inode->elem);
 
@@ -403,6 +405,8 @@ void inode_close(struct inode *inode) {
             fat_remove_chain(inode->sector, 0);
 
         disk_write(filesys_disk, inode->sector, &inode->data);  // inode close 시 disk에 저장
+
+        inode = return_is_link(inode);
 
         free(inode);
     }
@@ -413,9 +417,8 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
     uint8_t *buffer = buffer_;
     off_t bytes_read = 0;
     uint8_t *bounce = NULL;
-    bool link;
 
-    link = check_is_link(inode);
+    inode = check_is_link(inode);
 
     while (size > 0) {
         /* Disk sector to read, starting byte offset within sector. */
@@ -454,8 +457,7 @@ off_t inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset
     }
     free(bounce);
 
-    if (link)
-        return_is_link(inode);
+    inode = return_is_link(inode);
 
     return bytes_read;
 }
@@ -518,7 +520,6 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t
     if (inode_length(inode) < ori_offset + bytes_written)  // inode length 갱신
         inode->data.length = ori_offset + bytes_written;
 
-done:
     inode = return_is_link(inode);
 
     return bytes_written;

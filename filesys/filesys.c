@@ -141,6 +141,19 @@ struct file *filesys_open(const char *name) {
     if (inode_is_removed(inode))
         return NULL;
 
+    while (inode_get_type(inode) == 2) {  // link 처리 부분
+        char target[128];
+        target[0] = '\0';
+
+        struct dir *target_dir = parse_path(inode_get_linkpath(inode), target);
+
+        if (!dir_lookup(target_dir, target, &inode))
+            return NULL;
+
+        if (inode_is_removed(inode))
+            return NULL;
+    }
+
     return file_open(inode);
 #endif
 }
@@ -257,7 +270,8 @@ struct dir *parse_path(char *path_name, char *target) {
 
             struct dir *target_dir = parse_path(inode_get_linkpath(inode), target);
 
-            dir_lookup(target_dir, target, &inode);
+            if (!dir_lookup(target_dir, target, &inode))
+                goto err;
         }
 
         dir_close(dir);
