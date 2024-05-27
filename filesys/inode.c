@@ -79,7 +79,7 @@ void inode_init(void) {
  * the new inode to sector SECTOR on the file system disk.
  * Returns true if successful.
  * Returns false if memory or disk allocation fails. */
-bool inode_create(disk_sector_t sector, off_t length, bool type) {
+bool inode_create(disk_sector_t sector, off_t length, int32_t type) {
     struct inode_disk *disk_inode = NULL;
     bool success = false;
 
