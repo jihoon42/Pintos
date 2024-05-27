@@ -48,7 +48,8 @@ PintOS는 2004년 스탠포드에서 만들어진 교육용 운영체제예요. 
 
 <br>
 
-***PROJECT TEST LOG: [TESTLOG.md](./TESTLOG.md)***
+***PROJECT TEST LOG: [TESTLOG.md](./TESTLOG.md)***  
+***SUMMARY: [Arklimits' Jungle Archive](https://github.com/Arklimits/swjungle-archive/tree/main/summary/pintos)***
 
 [^PERS]: 소단원은 없지만 Test Case가 존재함. 모두 해결하지 못했다.
 [^PASS]: Synchronization Test가 PASS되는 이유는 기존에 Read 및 Write에 모두 Lock을 걸어놔서 통과는 된다.
