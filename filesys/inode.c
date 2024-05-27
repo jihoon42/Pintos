@@ -395,7 +395,7 @@ void inode_close(struct inode *inode) {
 
     /* Release resources if this was the last opener. */
     if (--inode->open_cnt == 0) {
-        inode = check_is_link(inode); // link 처리
+        struct inode *data_inode = check_is_link(inode);  // link에 원본 data를 저장
 
         /* Remove from inode list and release lock. */
         list_remove(&inode->elem);
@@ -404,9 +404,9 @@ void inode_close(struct inode *inode) {
         if (inode->removed)
             fat_remove_chain(inode->sector, 0);
 
-        disk_write(filesys_disk, inode->sector, &inode->data);  // inode close 시 disk에 저장
+        disk_write(filesys_disk, inode->sector, &data_inode->data);  // inode close 시 disk에 저장
 
-        inode = return_is_link(inode);
+        data_inode = return_is_link(inode);
 
         free(inode);
     }

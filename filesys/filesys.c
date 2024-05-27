@@ -186,6 +186,19 @@ bool filesys_remove(const char *name) {
 
     dir_lookup(dir_path, target, &inode);
 
+    while (inode_get_type(inode) == 2) {  // link 처리 부분
+        char target[128];
+        target[0] = '\0';
+
+        struct dir *target_dir = parse_path(inode_get_linkpath(inode), target);
+
+        if (!dir_lookup(target_dir, target, &inode))
+            return NULL;
+
+        if (inode_is_removed(inode))
+            return NULL;
+    }
+
     if (inode_get_type(inode) == 1) {  // 대상이 디렉토리인 경우
         struct dir *dir = dir_open(inode);
 
